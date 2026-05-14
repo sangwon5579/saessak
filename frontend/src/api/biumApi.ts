@@ -11,6 +11,7 @@ export type BiumAnalyzeResponse = {
   summary: {
     totalFiles: number;
     cleanableFiles: number;
+    estimatedSavedBytes: number;
     estimatedSavedMb: number;
     estimatedCo2Gram: number;
     earnedPoint: number;
@@ -22,6 +23,7 @@ export type BiumAnalyzeResponse = {
     riskLevel: string;
     recommendation: string;
     reason: string;
+    savedBytes: number;
     savedMb: number;
     co2Gram: number;
     point: number;

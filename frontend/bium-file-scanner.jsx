@@ -11,6 +11,35 @@ function getBiumExtension(name) {
   return parts.length > 1 ? parts.pop().toLowerCase() : '';
 }
 
+function formatBiumSize(savedMb, savedBytes) {
+  let bytes;
+  if (typeof savedBytes === 'number' && isFinite(savedBytes)) {
+    bytes = savedBytes;
+  } else {
+    bytes = (Number(savedMb) || 0) * 1024 * 1024;
+  }
+  bytes = Math.max(0, bytes);
+
+  if (bytes >= 1024 * 1024) {
+    return { value: (bytes / 1024 / 1024).toFixed(2), unit: 'MB' };
+  }
+  if (bytes >= 1024) {
+    return { value: (bytes / 1024).toFixed(1), unit: 'KB' };
+  }
+  return { value: String(Math.round(bytes)), unit: 'B' };
+}
+
+function formatBiumCo2(co2Gram) {
+  const g = Math.max(0, Number(co2Gram) || 0);
+  if (g >= 1) {
+    return { value: g.toFixed(2), unit: 'gCO₂e' };
+  }
+  if (g >= 0.001) {
+    return { value: g.toFixed(3), unit: 'gCO₂e' };
+  }
+  return { value: (g * 1000).toFixed(2), unit: 'mgCO₂e' };
+}
+
 function toBiumMetadata(file, relativePath) {
   return {
     name: file.name,
@@ -74,13 +103,15 @@ async function ensureBiumWritePermission(directoryHandle) {
 
 function updateBiumSummaryAfterDelete(summary, candidate) {
   const nextCleanable = Math.max(0, summary.cleanableFiles - 1);
-  const nextSaved = Math.max(0, Number((summary.estimatedSavedMb - candidate.savedMb).toFixed(2)));
-  const nextCo2 = Math.max(0, Number((summary.estimatedCo2Gram - candidate.co2Gram).toFixed(2)));
+  const nextSavedBytes = Math.max(0, (summary.estimatedSavedBytes || 0) - (candidate.savedBytes || 0));
+  const nextSaved = Math.max(0, Number((summary.estimatedSavedMb - candidate.savedMb).toFixed(6)));
+  const nextCo2 = Math.max(0, Number((summary.estimatedCo2Gram - candidate.co2Gram).toFixed(6)));
   const nextPoint = Math.max(0, summary.earnedPoint - candidate.point);
 
   return {
     ...summary,
     cleanableFiles: nextCleanable,
+    estimatedSavedBytes: nextSavedBytes,
     estimatedSavedMb: nextSaved,
     estimatedCo2Gram: nextCo2,
     earnedPoint: nextPoint,
@@ -279,6 +310,8 @@ function BiumFileScanner() {
     const relativePath = candidate.relativePath || candidate.name;
     const isDeleting = deletingPath === relativePath;
     const live = Boolean(options.live);
+    const sizeText = formatBiumSize(candidate.savedMb, candidate.savedBytes);
+    const co2Text = formatBiumCo2(candidate.co2Gram);
     const cardStyle = {
       ...options.style,
       ...(live ? {
@@ -321,8 +354,8 @@ function BiumFileScanner() {
         </div>
 
         <div className="mt-5 grid grid-cols-3 gap-2 text-[11px] num">
-          <div className="rounded-xl bg-paper2 px-2 py-2"><b>{candidate.savedMb}</b> MB</div>
-          <div className="rounded-xl bg-paper2 px-2 py-2"><b>{candidate.co2Gram}</b> gCO₂e</div>
+          <div className="rounded-xl bg-paper2 px-2 py-2"><b>{sizeText.value}</b> {sizeText.unit}</div>
+          <div className="rounded-xl bg-paper2 px-2 py-2"><b>{co2Text.value}</b> {co2Text.unit}</div>
           <div className="rounded-xl bg-paper2 px-2 py-2"><b>+{candidate.point}</b> P</div>
         </div>
 
@@ -352,6 +385,8 @@ function BiumFileScanner() {
   };
 
   const summary = result && result.summary;
+  const summarySize = summary ? formatBiumSize(summary.estimatedSavedMb, summary.estimatedSavedBytes) : null;
+  const summaryCo2 = summary ? formatBiumCo2(summary.estimatedCo2Gram) : null;
   const deleteEnabled = canPickDirectory && Boolean(directoryHandleRef.current);
   const topCandidate = result && result.candidates[0];
   const secondCandidate = result && result.candidates[1];
@@ -433,11 +468,11 @@ function BiumFileScanner() {
             </div>
             <div className="rounded-[20px] bg-white p-4 shadow-card">
               <div className="text-[11px] text-mute">절감 용량</div>
-              <div className="text-[17px] font-extrabold text-deep mt-1 num leading-tight">{summary.estimatedSavedMb} MB</div>
+              <div className="text-[17px] font-extrabold text-deep mt-1 num leading-tight">{summarySize.value} {summarySize.unit}</div>
             </div>
             <div className="rounded-[20px] bg-white p-4 shadow-card">
               <div className="text-[11px] text-mute">탄소 · 포인트</div>
-              <div className="text-[17px] font-extrabold text-deep mt-1 num leading-tight">{summary.estimatedCo2Gram} gCO₂e</div>
+              <div className="text-[17px] font-extrabold text-deep mt-1 num leading-tight">{summaryCo2.value} {summaryCo2.unit}</div>
               <div className="text-[13px] font-bold text-[#A85A1F] mt-1 num">+{summary.earnedPoint} P</div>
             </div>
           </div>
@@ -488,6 +523,8 @@ function BiumFileScanner() {
               {result.candidates.map((candidate, index) => {
                 const relativePath = candidate.relativePath || candidate.name;
                 const isDeleting = deletingPath === relativePath;
+                const listSize = formatBiumSize(candidate.savedMb, candidate.savedBytes);
+                const listCo2 = formatBiumCo2(candidate.co2Gram);
 
                 return (
                   <div key={`${relativePath}-${index}`} className="rounded-[20px] bg-white p-4 shadow-card">
@@ -506,8 +543,8 @@ function BiumFileScanner() {
                       <span className="rounded-full bg-[#FCE5CB] px-2 py-1 text-[#A85A1F]">{candidate.recommendation}</span>
                     </div>
                     <div className="mt-3 grid grid-cols-3 gap-2 text-[11px] num">
-                      <div className="rounded-xl bg-paper2 px-2 py-2"><b>{candidate.savedMb}</b> MB</div>
-                      <div className="rounded-xl bg-paper2 px-2 py-2"><b>{candidate.co2Gram}</b> gCO₂e</div>
+                      <div className="rounded-xl bg-paper2 px-2 py-2"><b>{listSize.value}</b> {listSize.unit}</div>
+                      <div className="rounded-xl bg-paper2 px-2 py-2"><b>{listCo2.value}</b> {listCo2.unit}</div>
                       <div className="rounded-xl bg-paper2 px-2 py-2"><b>+{candidate.point}</b> P</div>
                     </div>
                     <button

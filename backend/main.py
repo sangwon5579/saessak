@@ -1,5 +1,4 @@
 from datetime import datetime, timezone
-from math import floor
 import re
 from typing import Dict, List, Optional, Set, Tuple
 
@@ -54,8 +53,8 @@ ONE_YEAR_DAYS = 365
 LARGE_FILE_BYTES = 100 * 1024 * 1024
 
 
-def round2(value: float) -> float:
-    return round(value + 1e-9, 2)
+CO2_GRAM_PER_MB = 4.0
+BYTES_PER_POINT = 100 * 1024
 
 
 def split_name(name: str) -> Tuple[str, str]:
@@ -165,9 +164,10 @@ def analyze_files(payload: AnalyzeRequest):
         if not category:
             continue
 
-        saved_mb = round2(file.sizeBytes / 1024 / 1024)
-        co2_gram = round2(saved_mb * 0.4)
-        point = floor(co2_gram * 0.5)
+        saved_bytes = file.sizeBytes
+        saved_mb_raw = saved_bytes / 1024 / 1024
+        co2_gram_raw = saved_mb_raw * CO2_GRAM_PER_MB
+        point = max(1, round(saved_bytes / BYTES_PER_POINT))
         candidates.append(
             {
                 "name": file.name,
@@ -176,19 +176,22 @@ def analyze_files(payload: AnalyzeRequest):
                 "riskLevel": risk_level(category),
                 "recommendation": "직접 확인 후 삭제 추천",
                 "reason": candidate_reason(file, category),
-                "savedMb": saved_mb,
-                "co2Gram": co2_gram,
+                "savedBytes": saved_bytes,
+                "savedMb": round(saved_mb_raw, 6),
+                "co2Gram": round(co2_gram_raw, 6),
                 "point": point,
             }
         )
 
-    estimated_saved_mb = round2(sum(item["savedMb"] for item in candidates))
-    estimated_co2_gram = round2(sum(item["co2Gram"] for item in candidates))
+    total_bytes = sum(item["savedBytes"] for item in candidates)
+    estimated_saved_mb = round(total_bytes / 1024 / 1024, 6)
+    estimated_co2_gram = round(total_bytes / 1024 / 1024 * CO2_GRAM_PER_MB, 6)
 
     return {
         "summary": {
             "totalFiles": len(payload.files),
             "cleanableFiles": len(candidates),
+            "estimatedSavedBytes": total_bytes,
             "estimatedSavedMb": estimated_saved_mb,
             "estimatedCo2Gram": estimated_co2_gram,
             "earnedPoint": sum(item["point"] for item in candidates),
