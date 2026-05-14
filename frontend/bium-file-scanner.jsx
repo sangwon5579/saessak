@@ -411,7 +411,7 @@ function BiumFileScanner() {
     <div className="screen-in pb-6">
       <div className="px-5 pt-4">
         <div className="text-[13px] text-mute">PC 폴더 파일 분석</div>
-        <div className="text-[22px] font-bold text-deep tracking-tight mt-0.5 leading-tight">PC 비움 스캔</div>
+        <div className="text-[22px] font-bold text-deep tracking-tight mt-0.5 leading-tight">PC 정리 스캔</div>
         <div className="text-[12.5px] text-mute mt-2 leading-relaxed">
           선택한 폴더의 파일을 분석해 중복, 대용량, 오래된 파일을 찾아드립니다.
         </div>

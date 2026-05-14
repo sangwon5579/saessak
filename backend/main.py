@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 
-app = FastAPI(title="Bium File Analyzer API")
+app = FastAPI(title="Saessack File Analyzer API")
 
 app.add_middleware(
     CORSMiddleware,

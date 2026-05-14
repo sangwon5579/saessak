@@ -1164,7 +1164,7 @@ function ConnectScreen({ accounts, onToggle }) {
           ))}
         </div>
         <div className="text-[10.5px] text-mute mt-2 px-2 leading-relaxed">
-          비움은 KISA 정보보호 인증을 받은 보안 표준을 따릅니다. 자세한 처리방침은 설정 &gt; 약관에서 확인할 수 있어요.
+          새싹은 KISA 정보보호 인증을 받은 보안 표준을 따릅니다. 자세한 처리방침은 설정 &gt; 약관에서 확인할 수 있어요.
         </div>
       </div>
     </div>
