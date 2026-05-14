@@ -106,7 +106,6 @@ function updateBiumSummaryAfterDelete(summary, candidate) {
   const nextSavedBytes = Math.max(0, (summary.estimatedSavedBytes || 0) - (candidate.savedBytes || 0));
   const nextSaved = Math.max(0, Number((summary.estimatedSavedMb - candidate.savedMb).toFixed(6)));
   const nextCo2 = Math.max(0, Number((summary.estimatedCo2Gram - candidate.co2Gram).toFixed(6)));
-  const nextPoint = Math.max(0, summary.earnedPoint - candidate.point);
 
   return {
     ...summary,
@@ -114,7 +113,6 @@ function updateBiumSummaryAfterDelete(summary, candidate) {
     estimatedSavedBytes: nextSavedBytes,
     estimatedSavedMb: nextSaved,
     estimatedCo2Gram: nextCo2,
-    earnedPoint: nextPoint,
   };
 }
 
@@ -130,6 +128,14 @@ function BiumFileScanner() {
   const [deletingPath, setDeletingPath] = useStateScanner('');
   const [candidateDrag, setCandidateDrag] = useStateScanner({ x: 0, y: 0, on: false });
   const [deletedCount, setDeletedCount] = useStateScanner(0);
+  const [earnedPoints, setEarnedPoints] = useStateScanner(() => {
+    try {
+      const saved = parseInt(window.localStorage.getItem('biumEarnedPoints') || '0', 10);
+      return Number.isFinite(saved) && saved > 0 ? saved : 0;
+    } catch (storageError) {
+      return 0;
+    }
+  });
   const candidateDragRef = useRefScanner({ startX: 0, startY: 0, dragging: false });
   const canPickDirectory = typeof window.showDirectoryPicker === 'function';
 
@@ -220,7 +226,16 @@ function BiumFileScanner() {
       await entry.parentHandle.removeEntry(entry.name);
       fileEntryMapRef.current.delete(relativePath);
       setDeletedCount((count) => count + 1);
-      setNotice('파일을 삭제했습니다.');
+      setEarnedPoints((points) => {
+        const next = points + 1;
+        try {
+          window.localStorage.setItem('biumEarnedPoints', String(next));
+        } catch (storageError) {
+          // localStorage 사용 불가 시 누적 표시만 유지
+        }
+        return next;
+      });
+      setNotice('파일을 삭제해 1포인트를 획득했습니다.');
       setResult((previous) => {
         if (!previous) {
           return previous;
@@ -356,7 +371,7 @@ function BiumFileScanner() {
         <div className="mt-5 grid grid-cols-3 gap-2 text-[11px] num">
           <div className="rounded-xl bg-paper2 px-2 py-2"><b>{sizeText.value}</b> {sizeText.unit}</div>
           <div className="rounded-xl bg-paper2 px-2 py-2"><b>{co2Text.value}</b> {co2Text.unit}</div>
-          <div className="rounded-xl bg-paper2 px-2 py-2"><b>+{candidate.point}</b> P</div>
+          <div className="rounded-xl bg-paper2 px-2 py-2"><b>+1</b> P</div>
         </div>
 
         {live && (
@@ -420,12 +435,18 @@ function BiumFileScanner() {
           {loading ? '분석 중...' : 'PC 폴더 분석하기'}
         </button>
 
+        <div className="mt-4 rounded-[18px] px-4 py-3 flex items-center justify-between"
+             style={{ background: 'linear-gradient(135deg,#FFF4E6,#FCE5CB)', border: '1px solid #F8C291' }}>
+          <span className="text-[12px] font-bold text-[#A85A1F]">누적 획득 포인트</span>
+          <span className="text-[18px] font-extrabold text-[#A85A1F] num">{earnedPoints.toLocaleString()} P</span>
+        </div>
+
         <div className="mt-4 rounded-[18px] p-3 flex gap-2 text-[11.5px] leading-relaxed"
              style={{ background: '#F0F5EE', color: '#3B4A40', border: '1px solid #B7E4C7' }}>
           <span className="font-bold text-deep">안내</span>
           <span>
             파일 원본은 업로드되지 않습니다. 파일명, 용량, 수정일 등 최소 메타데이터만 분석하며,
-            삭제는 브라우저가 허용한 선택 폴더 안에서만 실행됩니다.
+            삭제는 브라우저가 허용한 선택 폴더 안에서만 실행됩니다. 정리 후보를 삭제할 때마다 1포인트가 적립됩니다.
           </span>
         </div>
 
@@ -471,9 +492,9 @@ function BiumFileScanner() {
               <div className="text-[17px] font-extrabold text-deep mt-1 num leading-tight">{summarySize.value} {summarySize.unit}</div>
             </div>
             <div className="rounded-[20px] bg-white p-4 shadow-card">
-              <div className="text-[11px] text-mute">탄소 · 포인트</div>
+              <div className="text-[11px] text-mute">탄소 · 획득 포인트</div>
               <div className="text-[17px] font-extrabold text-deep mt-1 num leading-tight">{summaryCo2.value} {summaryCo2.unit}</div>
-              <div className="text-[13px] font-bold text-[#A85A1F] mt-1 num">+{summary.earnedPoint} P</div>
+              <div className="text-[13px] font-bold text-[#A85A1F] mt-1 num">+{earnedPoints.toLocaleString()} P</div>
             </div>
           </div>
         </div>
@@ -545,7 +566,7 @@ function BiumFileScanner() {
                     <div className="mt-3 grid grid-cols-3 gap-2 text-[11px] num">
                       <div className="rounded-xl bg-paper2 px-2 py-2"><b>{listSize.value}</b> {listSize.unit}</div>
                       <div className="rounded-xl bg-paper2 px-2 py-2"><b>{listCo2.value}</b> {listCo2.unit}</div>
-                      <div className="rounded-xl bg-paper2 px-2 py-2"><b>+{candidate.point}</b> P</div>
+                      <div className="rounded-xl bg-paper2 px-2 py-2"><b>+1</b> P</div>
                     </div>
                     <button
                       className="mt-3 w-full rounded-[14px] bg-paper2 px-3 py-2 text-[12px] font-bold text-deep disabled:opacity-50"
