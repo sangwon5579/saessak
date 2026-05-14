@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<title>비움 (Bium) — 디지털 정리 + 환경 보상</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+
+<!-- Pretendard -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" />
+
+<!-- Tailwind (CDN, OK for prototypes) -->
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          deep:    '#1B4332',     // primary deep green
+          deep2:   '#143028',
+          sage:    '#95D5B2',
+          sage2:   '#B7E4C7',
+          earth:   '#F4A261',     // reward / point yellow-orange
+          earth2:  '#F8C291',
+          earth3: '#FFD9A8',
+          paper:   '#F8F9F4',     // warm off-white
+          paper2:  '#EFF1E8',
+          ink:     '#0F1A14',
+          ink2:    '#3B4A40',
+          mute:    '#7C8A80',
+        },
+        fontFamily: {
+          sans: ['Pretendard', '-apple-system', 'system-ui', 'sans-serif'],
+        },
+        boxShadow: {
+          card:  '0 1px 2px rgba(15,26,20,0.04), 0 8px 24px rgba(15,26,20,0.06)',
+          pop:   '0 2px 8px rgba(15,26,20,0.06), 0 24px 48px rgba(15,26,20,0.10)',
+          earth: '0 10px 30px rgba(244,162,97,0.35)',
+          deep:  '0 10px 30px rgba(27,67,50,0.25)',
+        },
+      }
+    }
+  };
+</script>
+
+<style>
+  html, body { background: #ECEEE6; }
+  body {
+    font-family: 'Pretendard', -apple-system, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    margin: 0;
+    min-height: 100vh;
+    display: flex; align-items: center; justify-content: center;
+    padding: 24px;
+    background:
+      radial-gradient(1200px 600px at 50% -100px, #DDE7DA 0%, #ECEEE6 60%) fixed;
+  }
+  /* tabular numerals for numbers everywhere */
+  .num { font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; }
+  /* hide scrollbars inside the phone */
+  .noscroll::-webkit-scrollbar { display: none; }
+  .noscroll { scrollbar-width: none; }
+
+  /* leaf fall keyframes */
+  @keyframes leafFall {
+    0%   { transform: translate(0,0) rotate(0deg); opacity: 1; }
+    100% { transform: translate(var(--tx,40px), 360px) rotate(var(--rot,540deg)); opacity: 0; }
+  }
+  .leaf-anim { animation: leafFall 1.4s cubic-bezier(.22,.61,.36,1) forwards; }
+
+  @keyframes pulseRing {
+    0%   { transform: scale(.92); opacity: .9; }
+    100% { transform: scale(1.6);  opacity: 0;  }
+  }
+  .pulse-ring { animation: pulseRing 1.6s ease-out infinite; }
+
+  @keyframes lpPop {
+    0%   { transform: translateY(8px) scale(.9); opacity: 0;}
+    20%  { transform: translateY(-4px) scale(1.05); opacity: 1;}
+    100% { transform: translateY(-46px) scale(1); opacity: 0;}
+  }
+  .lp-pop { animation: lpPop 1.2s ease-out forwards; }
+
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+  .shimmer-line {
+    background-image: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,.55) 50%, rgba(255,255,255,0) 100%);
+    background-size: 200% 100%;
+    animation: shimmer 2.4s linear infinite;
+  }
+
+  @keyframes screenIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .screen-in { animation: screenIn .28s ease-out both; }
+</style>
+</head>
+<body>
+
+<div id="root"></div>
+
+<!-- React -->
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="bium-icons.jsx"></script>
+<script type="text/babel" src="bium-shared.jsx"></script>
+<script type="text/babel" src="bium-screens.jsx"></script>
+<script type="text/babel" src="bium-file-scanner.jsx"></script>
+<script type="text/babel" src="bium-app.jsx"></script>
+
+</body>
+</html>
