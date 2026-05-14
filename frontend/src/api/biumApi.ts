@@ -29,6 +29,7 @@ export type BiumAnalyzeResponse = {
 };
 
 const API_PATHS = [
+  "https://saessak.onrender.com/api/bium/files/analyze",
   "/api/bium/files/analyze",
   "http://localhost:8080/api/bium/files/analyze",
 ];

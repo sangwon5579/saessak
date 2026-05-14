@@ -13,12 +13,14 @@ app = FastAPI(title="Bium File Analyzer API")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
+        "https://saessak-nine.vercel.app",
         "http://localhost:3000",
         "http://localhost:5173",
         "http://localhost:8000",
         "http://127.0.0.1:8000",
         "null",
     ],
+    allow_origin_regex=r"https://saessak-nine-.*\.vercel\.app",
     allow_credentials=False,
     allow_methods=["POST", "OPTIONS"],
     allow_headers=["*"],

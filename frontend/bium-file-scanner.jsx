@@ -1,6 +1,7 @@
 const { useRef: useRefScanner, useState: useStateScanner } = React;
 
 const BIUM_ANALYZE_ENDPOINTS = [
+  'https://saessak.onrender.com/api/bium/files/analyze',
   '/api/bium/files/analyze',
   'http://localhost:8080/api/bium/files/analyze',
 ];
