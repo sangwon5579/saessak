@@ -382,9 +382,9 @@ function HomeScreen({ lp, kg, areas, onCleanTap, onRewardsTap }) {
       {/* greeting */}
       <div className="flex items-center justify-between px-5 pt-4">
         <div>
-          <div className="text-[13px] text-mute">5월 8일 목요일 · 4주차</div>
+          <div className="text-[13px] text-mute">5월 18일 월요일</div>
           <div className="text-[22px] font-bold text-deep tracking-tight mt-0.5 flex items-center gap-1.5">
-            안녕, 지원님
+            안녕하세요
             <Leaf size={20} color="#52B788"/>
           </div>
         </div>
