@@ -2,11 +2,13 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8" />
-<title>새싹 (SAESSACK) — 디지털 정리 + 환경 보상</title>
+<title>비움 (BeeUm) · 새싹 — 디지털 정리로 자라는 작은 변화</title>
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 
-<!-- Pretendard -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" />
+<!-- Noto Sans KR (한글) + Inter (영문/숫자) — 새 디자인 시스템 -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
 
 <!-- Tailwind (CDN, OK for prototypes) -->
 <script src="https://cdn.tailwindcss.com"></script>
@@ -15,27 +17,80 @@
     theme: {
       extend: {
         colors: {
-          deep:    '#1B4332',     // primary deep green
-          deep2:   '#143028',
-          sage:    '#95D5B2',
-          sage2:   '#B7E4C7',
-          earth:   '#F4A261',     // reward / point yellow-orange
-          earth2:  '#F8C291',
+          // ─── greens ────────────────────────────────────
+          'green-darkest': '#0F1A14',
+          'green-dark':    '#143028',
+          'green-primary': '#1B4332',
+          'green-mid':     '#2D6A4F',
+          'green-success': '#2EA647',
+          'green-light':   '#52B788',
+          'green-soft':    '#74C69D',
+          'green-sage':    '#84BA99',
+          'green-pale':    '#B7E4C7',
+          'green-bg-1':    '#D8EEDF',
+          'green-bg-2':    '#EFF1E8',
+          'green-bg-3':    '#F0F5EE',
+          'green-info-bg': '#F6F8F3',
+
+          // ─── oranges ───────────────────────────────────
+          'orange-dark':   '#A85A1F',
+          'orange-primary':'#FF7100',
+          'orange-accent': '#F4A261',
+          'orange-soft':   '#ED9864',
+          'orange-yellow': '#FCBF5E',
+          'orange-bg-1':   '#FCE5CB',
+          'orange-bg-2':   '#FFE4D6',
+          'orange-bg-3':   '#FFF5EB',
+          'orange-bg-4':   '#FFD9A8',
+
+          // ─── neutrals ──────────────────────────────────
+          'bg-base':       '#F8F9F4',
+          'text-primary':  '#1B4332',
+          'text-secondary':'#3B4A40',
+          'text-muted':    '#5D6B62',
+          'text-gray':     '#7C8A80',
+          'text-light':    '#9AA89F',
+          'divider':       '#E4E7DD',
+
+          // ─── external brand ────────────────────────────
+          'gmail-red':     '#EA4335',
+          'outlook-blue':  '#0327C7',
+          'icloud-blue':   '#3A55A3',
+
+          // ─── legacy aliases (preserved so old bium-* code keeps compiling) ─
+          deep:   '#1B4332',
+          deep2:  '#143028',
+          sage:   '#95D5B2',
+          sage2:  '#B7E4C7',
+          earth:  '#F4A261',
+          earth2: '#F8C291',
           earth3: '#FFD9A8',
-          paper:   '#F8F9F4',     // warm off-white
-          paper2:  '#EFF1E8',
-          ink:     '#0F1A14',
-          ink2:    '#3B4A40',
-          mute:    '#7C8A80',
+          paper:  '#F8F9F4',
+          paper2: '#EFF1E8',
+          ink:    '#0F1A14',
+          ink2:   '#3B4A40',
+          mute:   '#7C8A80',
         },
         fontFamily: {
-          sans: ['Pretendard', '-apple-system', 'system-ui', 'sans-serif'],
+          // Korean: Noto Sans KR, Latin/numbers: Inter
+          sans:  ['Inter', 'Noto Sans KR', '-apple-system', 'system-ui', 'sans-serif'],
+          kr:    ['Noto Sans KR', 'sans-serif'],
+          en:    ['Inter', 'sans-serif'],
+          ios:   ['SF Pro', '-apple-system', 'sans-serif'],
+        },
+        borderRadius: {
+          'card':    '20px',
+          'card-lg': '28px',
+          'screen':  '48px',
         },
         boxShadow: {
-          card:  '0 1px 2px rgba(15,26,20,0.04), 0 8px 24px rgba(15,26,20,0.06)',
-          pop:   '0 2px 8px rgba(15,26,20,0.06), 0 24px 48px rgba(15,26,20,0.10)',
-          earth: '0 10px 30px rgba(244,162,97,0.35)',
-          deep:  '0 10px 30px rgba(27,67,50,0.25)',
+          'card-sm':   '0px 4px 12px 0px rgba(15,26,20,0.05)',
+          'card':      '0px 8px 24px 0px rgba(15,26,20,0.06)',
+          'elevated':  '0px 12px 28px 0px rgba(27,94,46,0.22)',
+          'hero':      '0px 18px 40px 0px rgba(20,48,40,0.3)',
+          'orange-btn':'0px 14px 30px 0px rgba(244,162,97,0.4)',
+          'green-btn': '0px 12px 28px 0px rgba(46,166,71,0.4)',
+          'nav':       '0px 16px 36px 0px rgba(15,26,20,0.10)',
         },
       }
     }
@@ -45,7 +100,7 @@
 <style>
   html, body { background: #ECEEE6; }
   body {
-    font-family: 'Pretendard', -apple-system, system-ui, sans-serif;
+    font-family: 'Inter', 'Noto Sans KR', -apple-system, system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
     margin: 0;
     min-height: 100vh;
@@ -54,13 +109,13 @@
     background:
       radial-gradient(1200px 600px at 50% -100px, #DDE7DA 0%, #ECEEE6 60%) fixed;
   }
-  /* tabular numerals for numbers everywhere */
+  /* tabular numerals — required for the many big-number displays */
   .num { font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; }
   /* hide scrollbars inside the phone */
   .noscroll::-webkit-scrollbar { display: none; }
   .noscroll { scrollbar-width: none; }
 
-  /* leaf fall keyframes */
+  /* ─── animations ────────────────────────────────────────────── */
   @keyframes leafFall {
     0%   { transform: translate(0,0) rotate(0deg); opacity: 1; }
     100% { transform: translate(var(--tx,40px), 360px) rotate(var(--rot,540deg)); opacity: 0; }
@@ -95,6 +150,13 @@
     to   { opacity: 1; transform: translateY(0); }
   }
   .screen-in { animation: screenIn .28s ease-out both; }
+
+  /* small celebration burst for clean-complete */
+  @keyframes confettiFloat {
+    0%   { transform: translateY(0) rotate(0deg);   opacity: 1; }
+    100% { transform: translateY(-12px) rotate(40deg); opacity: .7; }
+  }
+  .confetti-anim { animation: confettiFloat 1.8s ease-in-out infinite alternate; }
 </style>
 </head>
 <body>

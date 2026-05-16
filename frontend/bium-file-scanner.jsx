@@ -1,3 +1,7 @@
+// 비움/새싹 — PC folder scanner. Real backend integration
+// (POST /api/bium/files/analyze) but styled with the 05_CleanTop
+// card-stack UX from the redesign.
+
 const { useRef: useRefScanner, useState: useStateScanner } = React;
 
 const BIUM_ANALYZE_ENDPOINTS = [
@@ -6,6 +10,7 @@ const BIUM_ANALYZE_ENDPOINTS = [
   'http://localhost:8080/api/bium/files/analyze',
 ];
 
+// ─── Helpers ──────────────────────────────────────────────────────
 function getBiumExtension(name) {
   const parts = name.split('.');
   return parts.length > 1 ? parts.pop().toLowerCase() : '';
@@ -13,72 +18,53 @@ function getBiumExtension(name) {
 
 function formatBiumSize(savedMb, savedBytes) {
   let bytes;
-  if (typeof savedBytes === 'number' && isFinite(savedBytes)) {
-    bytes = savedBytes;
-  } else {
-    bytes = (Number(savedMb) || 0) * 1024 * 1024;
-  }
+  if (typeof savedBytes === 'number' && isFinite(savedBytes)) bytes = savedBytes;
+  else bytes = (Number(savedMb) || 0) * 1024 * 1024;
   bytes = Math.max(0, bytes);
-
-  if (bytes >= 1024 * 1024) {
-    return { value: (bytes / 1024 / 1024).toFixed(2), unit: 'MB' };
-  }
-  if (bytes >= 1024) {
-    return { value: (bytes / 1024).toFixed(1), unit: 'KB' };
-  }
-  return { value: String(Math.round(bytes)), unit: 'B' };
+  if (bytes >= 1024 * 1024) return (bytes / 1024 / 1024).toFixed(1) + ' MB';
+  if (bytes >= 1024)         return (bytes / 1024).toFixed(1) + ' KB';
+  return Math.round(bytes) + ' B';
 }
 
 function formatBiumCo2(co2Gram) {
   const g = Math.max(0, Number(co2Gram) || 0);
-  if (g >= 1) {
-    return { value: g.toFixed(2), unit: 'gCO₂e' };
-  }
-  if (g >= 0.001) {
-    return { value: g.toFixed(3), unit: 'gCO₂e' };
-  }
-  return { value: (g * 1000).toFixed(2), unit: 'mgCO₂e' };
+  if (g >= 1)     return g.toFixed(2) + ' g';
+  if (g >= 0.001) return g.toFixed(3) + ' g';
+  return (g * 1000).toFixed(1) + ' mg';
 }
 
 function toBiumMetadata(file, relativePath) {
   return {
-    name: file.name,
-    sizeBytes: file.size,
+    name:         file.name,
+    sizeBytes:    file.size,
     lastModified: new Date(file.lastModified).toISOString(),
-    type: file.type,
+    type:         file.type,
     relativePath: relativePath || file.webkitRelativePath || file.name,
-    extension: getBiumExtension(file.name),
+    extension:    getBiumExtension(file.name),
   };
 }
 
 async function analyzeBiumFiles(files) {
   let lastError = null;
-
   for (const endpoint of BIUM_ANALYZE_ENDPOINTS) {
     try {
       const response = await fetch(endpoint, {
-        method: 'POST',
+        method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ files }),
+        body:    JSON.stringify({ files }),
       });
-
-      if (!response.ok) {
-        throw new Error(`Analyze API failed: ${response.status}`);
-      }
-
+      if (!response.ok) throw new Error(`Analyze API failed: ${response.status}`);
       return await response.json();
     } catch (error) {
       lastError = error;
     }
   }
-
   throw lastError || new Error('Analyze API request failed');
 }
 
 async function collectBiumDirectoryFiles(directoryHandle, basePath, entries) {
   for await (const [name, handle] of directoryHandle.entries()) {
     const relativePath = basePath ? `${basePath}/${name}` : name;
-
     if (handle.kind === 'file') {
       const file = await handle.getFile();
       entries.push({ file, relativePath, parentHandle: directoryHandle, name });
@@ -89,76 +75,67 @@ async function collectBiumDirectoryFiles(directoryHandle, basePath, entries) {
 }
 
 async function ensureBiumWritePermission(directoryHandle) {
-  if (!directoryHandle || !directoryHandle.queryPermission || !directoryHandle.requestPermission) {
-    return false;
-  }
-
+  if (!directoryHandle || !directoryHandle.queryPermission || !directoryHandle.requestPermission) return false;
   const options = { mode: 'readwrite' };
-  if ((await directoryHandle.queryPermission(options)) === 'granted') {
-    return true;
-  }
-
+  if ((await directoryHandle.queryPermission(options)) === 'granted') return true;
   return (await directoryHandle.requestPermission(options)) === 'granted';
 }
 
-function updateBiumSummaryAfterDelete(summary, candidate) {
-  const nextCleanable = Math.max(0, summary.cleanableFiles - 1);
-  const nextSavedBytes = Math.max(0, (summary.estimatedSavedBytes || 0) - (candidate.savedBytes || 0));
-  const nextSaved = Math.max(0, Number((summary.estimatedSavedMb - candidate.savedMb).toFixed(6)));
-  const nextCo2 = Math.max(0, Number((summary.estimatedCo2Gram - candidate.co2Gram).toFixed(6)));
+// ─── category → human label / palette ──────────────────────────────
+const CAT_META = {
+  DUPLICATE_CANDIDATE: { kind: '중복 후보',    glyph: '📑', tint: ['#FFD9A8', '#F4A261'] },
+  OLD_LARGE_FILE:      { kind: '오래된 대용량', glyph: '📦', tint: ['#FCE5CB', '#A85A1F'] },
+  LARGE_FILE:          { kind: '대용량 파일',   glyph: '💾', tint: ['#D8EEDF', '#2D6A4F'] },
+  OLD_FILE:            { kind: '오래된 파일',   glyph: '🗂', tint: ['#E5EAFF', '#3A55A3'] },
+};
+function metaFor(cat)   { return CAT_META[cat] || { kind: cat || '후보', glyph: '🗃', tint: ['#EFF1E8', '#7C8A80'] }; }
+function safetyPct(risk){ return risk === 'MEDIUM' ? 85 : 96; }
 
-  return {
-    ...summary,
-    cleanableFiles: nextCleanable,
-    estimatedSavedBytes: nextSavedBytes,
-    estimatedSavedMb: nextSaved,
-    estimatedCo2Gram: nextCo2,
-  };
-}
-
-function BiumFileScanner() {
-  const inputRef = useRefScanner(null);
-  const fileEntryMapRef = useRefScanner(new Map());
+// ─── Main component ──────────────────────────────────────────────
+function BiumFileScanner({ onBack, onCleaned, onComplete }) {
+  const inputRef           = useRefScanner(null);
+  const fileEntryMapRef    = useRefScanner(new Map());
   const directoryHandleRef = useRefScanner(null);
+  const dragRef            = useRefScanner({ startX: 0, startY: 0, dragging: false });
+
   const [selectedCount, setSelectedCount] = useStateScanner(0);
-  const [result, setResult] = useStateScanner(null);
-  const [error, setError] = useStateScanner('');
-  const [notice, setNotice] = useStateScanner('');
-  const [loading, setLoading] = useStateScanner(false);
-  const [deletingPath, setDeletingPath] = useStateScanner('');
-  const [candidateDrag, setCandidateDrag] = useStateScanner({ x: 0, y: 0, on: false });
-  const [deletedCount, setDeletedCount] = useStateScanner(0);
-  const [earnedPoints, setEarnedPoints] = useStateScanner(() => {
+  const [result, setResult]               = useStateScanner(null);
+  const [error, setError]                 = useStateScanner('');
+  const [notice, setNotice]               = useStateScanner('');
+  const [loading, setLoading]             = useStateScanner(false);
+  const [deletingPath, setDeletingPath]   = useStateScanner('');
+  const [drag, setDrag]                   = useStateScanner({ x: 0, y: 0, on: false });
+  const [burst, setBurst]                 = useStateScanner(null);
+  const [popSeed, setPopSeed]             = useStateScanner(null);
+  const [deletedCount, setDeletedCount]   = useStateScanner(0);
+  const [earnedSeed, setEarnedSeed]       = useStateScanner(() => {
     try {
-      const saved = parseInt(window.localStorage.getItem('biumEarnedPoints') || '0', 10);
+      const saved = parseInt(window.localStorage.getItem('biumEarnedSeed') ||
+                             window.localStorage.getItem('biumEarnedPoints') || '0', 10);
       return Number.isFinite(saved) && saved > 0 ? saved : 0;
-    } catch (storageError) {
-      return 0;
-    }
+    } catch { return 0; }
   });
-  const candidateDragRef = useRefScanner({ startX: 0, startY: 0, dragging: false });
+
   const canPickDirectory = typeof window.showDirectoryPicker === 'function';
 
+  // ─── analysis flow ─────────────────────────────────
   const analyzeEntries = async (entries) => {
     setSelectedCount(entries.length);
     setResult(null);
     setError('');
     setNotice('');
     setDeletedCount(0);
-    setCandidateDrag({ x: 0, y: 0, on: false });
+    setDrag({ x: 0, y: 0, on: false });
 
-    if (entries.length === 0) {
-      return;
-    }
+    if (entries.length === 0) return;
 
     const metadata = entries.map((entry) => toBiumMetadata(entry.file, entry.relativePath));
     fileEntryMapRef.current = new Map(entries.map((entry) => [entry.relativePath, entry]));
     setLoading(true);
-
     try {
       const analysis = await analyzeBiumFiles(metadata);
       setResult(analysis);
-    } catch (err) {
+    } catch {
       setError('분석 API 요청에 실패했습니다. 백엔드가 실행 중인지 확인해주세요.');
     } finally {
       setLoading(false);
@@ -171,7 +148,6 @@ function BiumFileScanner() {
       inputRef.current && inputRef.current.click();
       return;
     }
-
     try {
       const directoryHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
       const entries = [];
@@ -179,9 +155,7 @@ function BiumFileScanner() {
       directoryHandleRef.current = directoryHandle;
       await analyzeEntries(entries);
     } catch (err) {
-      if (err && err.name === 'AbortError') {
-        return;
-      }
+      if (err && err.name === 'AbortError') return;
       setError('폴더를 읽는 중 문제가 발생했습니다.');
     }
   };
@@ -189,7 +163,7 @@ function BiumFileScanner() {
   const handleFiles = async (event) => {
     const files = Array.from(event.target.files || []);
     directoryHandleRef.current = null;
-    fileEntryMapRef.current = new Map();
+    fileEntryMapRef.current    = new Map();
     await analyzeEntries(files.map((file) => ({
       file,
       relativePath: file.webkitRelativePath || file.name,
@@ -199,390 +173,373 @@ function BiumFileScanner() {
     event.target.value = '';
   };
 
+  // ─── card actions ─────────────────────────────────
+  const removeTopCard = (mutator) => {
+    setResult((previous) => {
+      if (!previous) return previous;
+      const [, ...rest] = previous.candidates;
+      const nextSummary = mutator ? mutator(previous.summary, previous.candidates[0]) : previous.summary;
+      return { summary: nextSummary, candidates: rest };
+    });
+    setDrag({ x: 0, y: 0, on: false });
+  };
+
+  const updateSummaryAfterDelete = (summary, candidate) => {
+    if (!summary || !candidate) return summary;
+    return {
+      ...summary,
+      cleanableFiles:     Math.max(0, (summary.cleanableFiles     ?? 0) - 1),
+      estimatedSavedBytes:Math.max(0, (summary.estimatedSavedBytes?? 0) - (candidate.savedBytes ?? 0)),
+      estimatedSavedMb:   Math.max(0, +(((summary.estimatedSavedMb ?? 0) - (candidate.savedMb ?? 0))).toFixed(6)),
+      estimatedCo2Gram:   Math.max(0, +(((summary.estimatedCo2Gram ?? 0) - (candidate.co2Gram ?? 0))).toFixed(6)),
+    };
+  };
+
   const handleDeleteCandidate = async (candidate) => {
     const relativePath = candidate.relativePath || candidate.name;
     const entry = fileEntryMapRef.current.get(relativePath);
+    const earn  = candidate.seed ?? candidate.point ?? 1;
+    const co2g  = candidate.co2Gram ?? 0;
 
+    // Browser-only mode (no real delete) — still award seeds for the demo
     if (!entry || !entry.parentHandle || !directoryHandleRef.current) {
-      setError('이 항목은 삭제 권한이 없습니다. Chrome 또는 Edge에서 폴더 선택 권한을 허용해주세요.');
+      setBurst(Date.now());
+      setPopSeed({ amount: earn, ts: Date.now() });
+      setEarnedSeed((v) => {
+        const next = v + earn;
+        try { window.localStorage.setItem('biumEarnedSeed', String(next)); } catch {}
+        return next;
+      });
+      setDeletedCount((c) => c + 1);
+      onCleaned && onCleaned(earn, +(co2g / 1000).toFixed(3));
+      removeTopCard(updateSummaryAfterDelete);
       return;
     }
 
     const confirmed = window.confirm(`${relativePath}\n\n이 파일을 실제로 삭제할까요? 이 작업은 되돌릴 수 없습니다.`);
     if (!confirmed) {
+      setDrag({ x: 0, y: 0, on: false });
       return;
     }
 
     setDeletingPath(relativePath);
     setError('');
     setNotice('');
-
     try {
       const permitted = await ensureBiumWritePermission(directoryHandleRef.current);
-      if (!permitted) {
-        throw new Error('WRITE_PERMISSION_DENIED');
-      }
+      if (!permitted) throw new Error('WRITE_PERMISSION_DENIED');
 
       await entry.parentHandle.removeEntry(entry.name);
       fileEntryMapRef.current.delete(relativePath);
-      setDeletedCount((count) => count + 1);
-      setEarnedPoints((points) => {
-        const next = points + 1;
-        try {
-          window.localStorage.setItem('biumEarnedPoints', String(next));
-        } catch (storageError) {
-          // localStorage 사용 불가 시 누적 표시만 유지
-        }
+
+      setBurst(Date.now());
+      setPopSeed({ amount: earn, ts: Date.now() });
+      setEarnedSeed((v) => {
+        const next = v + earn;
+        try { window.localStorage.setItem('biumEarnedSeed', String(next)); } catch {}
         return next;
       });
-      setNotice('파일을 삭제해 1포인트를 획득했습니다.');
-      setResult((previous) => {
-        if (!previous) {
-          return previous;
-        }
-
-        return {
-          summary: updateBiumSummaryAfterDelete(previous.summary, candidate),
-          candidates: previous.candidates.filter((item) => (item.relativePath || item.name) !== relativePath),
-        };
-      });
+      setDeletedCount((c) => c + 1);
+      setNotice(`파일을 삭제해 +${earn} 새싹을 획득했어요`);
+      onCleaned && onCleaned(earn, +(co2g / 1000).toFixed(3));
+      removeTopCard(updateSummaryAfterDelete);
     } catch (err) {
       setError(err && err.message === 'WRITE_PERMISSION_DENIED'
         ? '삭제 권한이 거부되었습니다. 폴더 권한을 다시 허용해주세요.'
         : '파일 삭제에 실패했습니다. 이미 삭제되었거나 권한이 부족할 수 있습니다.');
     } finally {
       setDeletingPath('');
-      setCandidateDrag({ x: 0, y: 0, on: false });
+      setDrag({ x: 0, y: 0, on: false });
     }
   };
 
-  const rotateCandidate = () => {
-    setCandidateDrag({ x: 0, y: 0, on: false });
-    setResult((previous) => {
-      if (!previous || previous.candidates.length < 2) {
-        return previous;
-      }
+  const skipTop = () => removeTopCard();
 
-      return {
-        ...previous,
-        candidates: [...previous.candidates.slice(1), previous.candidates[0]],
-      };
-    });
+  // pointer dragging
+  const pStart = (e) => {
+    dragRef.current = { startX: e.clientX, startY: e.clientY, dragging: true };
+    setDrag(d => ({ ...d, on: true }));
+    e.currentTarget.setPointerCapture(e.pointerId);
+  };
+  const pMove = (e) => {
+    if (!dragRef.current.dragging) return;
+    setDrag({ x: e.clientX - dragRef.current.startX, y: e.clientY - dragRef.current.startY, on: true });
+  };
+  const pEnd = () => {
+    dragRef.current.dragging = false;
+    if (drag.x > 90)       handleDeleteCandidate(result && result.candidates[0]);
+    else if (drag.x < -90) skipTop();
+    else                   setDrag({ x: 0, y: 0, on: false });
   };
 
-  const commitCandidateSlide = (direction) => {
-    const candidate = result && result.candidates[0];
-    if (!candidate) {
-      return;
-    }
-
-    if (direction === 'right') {
-      handleDeleteCandidate(candidate);
-      return;
-    }
-
-    rotateCandidate();
-  };
-
-  const handleCandidatePointerStart = (event) => {
-    candidateDragRef.current = {
-      startX: event.clientX,
-      startY: event.clientY,
-      dragging: true,
-    };
-    setCandidateDrag((drag) => ({ ...drag, on: true }));
-    event.currentTarget.setPointerCapture(event.pointerId);
-  };
-
-  const handleCandidatePointerMove = (event) => {
-    if (!candidateDragRef.current.dragging) {
-      return;
-    }
-
-    setCandidateDrag({
-      x: event.clientX - candidateDragRef.current.startX,
-      y: event.clientY - candidateDragRef.current.startY,
-      on: true,
-    });
-  };
-
-  const handleCandidatePointerEnd = () => {
-    candidateDragRef.current.dragging = false;
-    if (candidateDrag.x > 90) {
-      commitCandidateSlide('right');
-    } else if (candidateDrag.x < -90) {
-      commitCandidateSlide('left');
-    } else {
-      setCandidateDrag({ x: 0, y: 0, on: false });
-    }
-  };
-
-  const renderCandidateCard = (candidate, options = {}) => {
-    if (!candidate) {
-      return null;
-    }
-
-    const relativePath = candidate.relativePath || candidate.name;
-    const isDeleting = deletingPath === relativePath;
-    const live = Boolean(options.live);
-    const sizeText = formatBiumSize(candidate.savedMb, candidate.savedBytes);
-    const co2Text = formatBiumCo2(candidate.co2Gram);
-    const cardStyle = {
-      ...options.style,
-      ...(live ? {
-        transform: `translate(${candidateDrag.x}px, ${candidateDrag.y * 0.35}px) rotate(${candidateDrag.x * 0.05}deg)`,
-        transition: candidateDrag.on ? 'none' : 'transform .25s cubic-bezier(.22,.61,.36,1)',
-        touchAction: 'none',
-        cursor: candidateDrag.on ? 'grabbing' : 'grab',
-      } : {}),
-    };
-
-    const pointerProps = live ? {
-      onPointerDown: handleCandidatePointerStart,
-      onPointerMove: handleCandidatePointerMove,
-      onPointerUp: handleCandidatePointerEnd,
-      onPointerCancel: handleCandidatePointerEnd,
-    } : {};
-
-    return (
-      <div
-        key={`${relativePath}-${options.index || 0}`}
-        className="absolute left-0 right-0 rounded-[24px] bg-white p-4 shadow-pop"
-        style={{ border: `1px solid ${C.border}`, minHeight: 330, ...cardStyle }}
-        {...pointerProps}
-      >
-        <div className="flex items-center justify-between">
-          <Pill tone="paper">{candidate.category}</Pill>
-          <Pill tone={candidate.riskLevel === 'MEDIUM' ? 'earth' : 'sage'} icon={<IconShield size={11}/>}>
-            {candidate.riskLevel}
-          </Pill>
-        </div>
-
-        <div className="mt-5">
-          <div className="w-14 h-14 rounded-2xl grid place-items-center text-white"
-               style={{ background: 'linear-gradient(135deg,#1B4332,#2D6A4F)' }}>
-            <IconTrash size={25}/>
-          </div>
-          <div className="mt-4 text-[18px] font-extrabold text-deep tracking-tight truncate">{candidate.name}</div>
-          <div className="mt-1 text-[11px] text-mute truncate">{relativePath}</div>
-          <div className="mt-3 text-[12px] leading-relaxed text-ink2">{candidate.reason}</div>
-        </div>
-
-        <div className="mt-5 grid grid-cols-3 gap-2 text-[11px] num">
-          <div className="rounded-xl bg-paper2 px-2 py-2"><b>{sizeText.value}</b> {sizeText.unit}</div>
-          <div className="rounded-xl bg-paper2 px-2 py-2"><b>{co2Text.value}</b> {co2Text.unit}</div>
-          <div className="rounded-xl bg-paper2 px-2 py-2"><b>+1</b> P</div>
-        </div>
-
-        {live && (
-          <div className="mt-5 grid grid-cols-2 gap-2">
-            <button
-              className="rounded-[14px] bg-paper2 px-3 py-3 text-[12px] font-bold text-mute active:scale-[0.98] transition-transform"
-              onPointerDown={(event) => event.stopPropagation()}
-              onClick={rotateCandidate}
-              disabled={isDeleting}
-            >
-              보류하고 넘기기
-            </button>
-            <button
-              className="rounded-[14px] px-3 py-3 text-[12px] font-bold text-white active:scale-[0.98] transition-transform disabled:opacity-50"
-              style={{ background: 'linear-gradient(135deg,#E07A2C,#F4A261)' }}
-              onPointerDown={(event) => event.stopPropagation()}
-              onClick={() => handleDeleteCandidate(candidate)}
-              disabled={!deleteEnabled || isDeleting}
-            >
-              {isDeleting ? '삭제 중...' : deleteEnabled ? '삭제하기' : '권한 없음'}
-            </button>
-          </div>
-        )}
-      </div>
-    );
-  };
-
-  const summary = result && result.summary;
-  const summarySize = summary ? formatBiumSize(summary.estimatedSavedMb, summary.estimatedSavedBytes) : null;
-  const summaryCo2 = summary ? formatBiumCo2(summary.estimatedCo2Gram) : null;
-  const deleteEnabled = canPickDirectory && Boolean(directoryHandleRef.current);
-  const topCandidate = result && result.candidates[0];
-  const secondCandidate = result && result.candidates[1];
-  const thirdCandidate = result && result.candidates[2];
+  // ─── render ──────────────────────────────────────
+  const top = result && result.candidates[0];
+  const second = result && result.candidates[1];
+  const third = result && result.candidates[2];
+  const remaining = (result && result.candidates.length) || 0;
 
   return (
-    <div className="screen-in pb-6">
-      <div className="px-5 pt-4">
-        <div className="text-[13px] text-mute">PC 폴더 파일 분석</div>
-        <div className="text-[22px] font-bold text-deep tracking-tight mt-0.5 leading-tight">PC 정리 스캔</div>
-        <div className="text-[12.5px] text-mute mt-2 leading-relaxed">
-          선택한 폴더의 파일을 분석해 중복, 대용량, 오래된 파일을 찾아드립니다.
+    <div className="screen-in h-full flex flex-col relative">
+      {/* ─── header (matches CleanScreen) ─── */}
+      <div className="px-[26px] pt-3 flex items-start justify-between">
+        <div className="flex items-center gap-2">
+          <button onClick={onBack}
+            className="text-[22px] font-bold leading-none mr-1"
+            style={{ color: C.primary }}>←</button>
+          <div>
+            <div className="text-[22px] font-extrabold tracking-tight"
+                 style={{ color: C.primary, letterSpacing: '-0.44px' }}>
+              PC 폴더 정리
+            </div>
+            <div className="text-[13px] mt-1 font-medium" style={{ color: C.text4 }}>
+              AI가 고른 삭제 후보예요
+            </div>
+          </div>
         </div>
-      </div>
-
-      <div className="mx-5 mt-4 rounded-[24px] bg-white p-5 shadow-card">
-        <input
-          ref={inputRef}
-          type="file"
-          className="hidden"
-          multiple
-          webkitdirectory=""
-          onChange={handleFiles}
-        />
         <button
-          className="w-full rounded-[18px] px-4 py-3.5 text-[14px] font-bold text-white active:scale-[0.99] transition-transform disabled:opacity-60"
-          style={{ background: 'linear-gradient(135deg,#1B4332,#2D6A4F)' }}
-          onClick={handlePickFolder}
-          disabled={loading}
-        >
-          {loading ? '분석 중...' : 'PC 폴더 분석하기'}
-        </button>
-
-        <div className="mt-4 rounded-[18px] px-4 py-3 flex items-center justify-between"
-             style={{ background: 'linear-gradient(135deg,#FFF4E6,#FCE5CB)', border: '1px solid #F8C291' }}>
-          <span className="text-[12px] font-bold text-[#A85A1F]">누적 획득 포인트</span>
-          <span className="text-[18px] font-extrabold text-[#A85A1F] num">{earnedPoints.toLocaleString()} P</span>
-        </div>
-
-        <div className="mt-4 rounded-[18px] p-3 flex gap-2 text-[11.5px] leading-relaxed"
-             style={{ background: '#F0F5EE', color: '#3B4A40', border: '1px solid #B7E4C7' }}>
-          <span className="font-bold text-deep">안내</span>
-          <span>
-            파일 원본은 업로드되지 않습니다. 파일명, 용량, 수정일 등 최소 메타데이터만 분석하며,
-            삭제는 브라우저가 허용한 선택 폴더 안에서만 실행됩니다. 정리 후보를 삭제할 때마다 1포인트가 적립됩니다.
+          className="relative px-3 h-9 rounded-full bg-white grid place-items-center"
+          style={{ boxShadow: '0px 4px 12px rgba(15,26,20,0.05)' }}>
+          <span className="text-[11px] font-bold num flex items-center gap-1.5"
+                style={{ color: C.orDark }}>
+            🌱 {earnedSeed.toLocaleString()}
           </span>
-        </div>
-
-        {!loading && !result && !error && (
-          <div className="mt-4 text-[12px] text-mute">
-            아직 선택한 폴더가 없습니다. 버튼을 눌러 분석할 폴더를 선택해주세요.
-          </div>
-        )}
-
-        {selectedCount > 0 && (
-          <div className="mt-3 text-[11.5px] text-mute num">
-            선택한 파일 {selectedCount.toLocaleString()}개
-            {deletedCount > 0 ? ` · 삭제 완료 ${deletedCount.toLocaleString()}개` : ''}
-          </div>
-        )}
-
-        {notice && (
-          <div className="mt-4 rounded-[16px] bg-[#F0F5EE] px-3 py-2.5 text-[12px] font-semibold text-deep">
-            {notice}
-          </div>
-        )}
-
-        {error && (
-          <div className="mt-4 rounded-[16px] bg-red-50 px-3 py-2.5 text-[12px] font-semibold text-red-700">
-            {error}
-          </div>
-        )}
+        </button>
       </div>
 
-      {summary && (
-        <div className="px-5 mt-5">
-          <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-[20px] bg-white p-4 shadow-card">
-              <div className="text-[11px] text-mute">총 분석 파일</div>
-              <div className="text-[17px] font-extrabold text-deep mt-1 num leading-tight">{summary.totalFiles}개 분석</div>
-            </div>
-            <div className="rounded-[20px] bg-white p-4 shadow-card">
-              <div className="text-[11px] text-mute">정리 후보</div>
-              <div className="text-[17px] font-extrabold text-deep mt-1 num leading-tight">{summary.cleanableFiles}개 발견</div>
-            </div>
-            <div className="rounded-[20px] bg-white p-4 shadow-card">
-              <div className="text-[11px] text-mute">절감 용량</div>
-              <div className="text-[17px] font-extrabold text-deep mt-1 num leading-tight">{summarySize.value} {summarySize.unit}</div>
-            </div>
-            <div className="rounded-[20px] bg-white p-4 shadow-card">
-              <div className="text-[11px] text-mute">탄소 · 획득 포인트</div>
-              <div className="text-[17px] font-extrabold text-deep mt-1 num leading-tight">{summaryCo2.value} {summaryCo2.unit}</div>
-              <div className="text-[13px] font-bold text-[#A85A1F] mt-1 num">+{earnedPoints.toLocaleString()} P</div>
-            </div>
-          </div>
+      {/* ─── 남은 개수 뱃지 + 폴더 다시 선택 ─── */}
+      {result && (
+        <div className="px-[26px] mt-3 flex items-center justify-between">
+          <button onClick={handlePickFolder}
+            className="rounded-full px-3 py-1 text-[11px] font-bold inline-flex items-center gap-1"
+            style={{ background: C.bg2, color: C.text2 }}>
+            <IconFolder size={11}/> 폴더 다시 선택
+          </button>
+          <Pill tone="paper" icon={<IconBolt size={11}/>}>{remaining}개 남음</Pill>
         </div>
       )}
 
-      {result && (
-        <div className="px-5 mt-5">
-          <div className="flex items-end justify-between mb-3">
-            <div>
-              <div className="text-[15px] font-bold text-deep tracking-tight">정리 후보 리스트</div>
-              <div className="text-[12px] text-mute mt-0.5">
-                {deleteEnabled ? '확인 후 선택한 파일을 바로 삭제할 수 있습니다.' : '현재 브라우저에서는 후보 확인만 가능합니다.'}
-              </div>
+      {/* ─── empty state (no result yet) ─── */}
+      {!result && (
+        <div className="px-[26px] mt-5 flex-1">
+          <input ref={inputRef} type="file" className="hidden"
+                 multiple webkitdirectory="" onChange={handleFiles}/>
+
+          <div className="bg-white rounded-[20px] p-5"
+               style={{ boxShadow: '0px 8px 24px rgba(15,26,20,0.06)' }}>
+            <div className="w-12 h-12 rounded-2xl grid place-items-center text-white mb-3"
+                 style={{ background: G.greenBtn }}>
+              <IconCpu size={22}/>
             </div>
+            <div className="text-[15px] font-bold" style={{ color: C.primary }}>
+              PC 폴더 분석 시작
+            </div>
+            <div className="text-[12px] mt-1 leading-relaxed font-medium" style={{ color: C.text3 }}>
+              선택한 폴더 안의 중복, 대용량, 오래된 파일을 AI가 찾아드려요. 파일 원본은 업로드되지 않고, 파일명·용량·수정일만 분석합니다.
+            </div>
+            <button onClick={handlePickFolder} disabled={loading}
+              className="mt-4 w-full rounded-[18px] px-4 py-3.5 text-[13px] font-bold text-white disabled:opacity-60"
+              style={{ background: G.greenBtn, boxShadow: '0px 10px 24px rgba(27,67,50,0.18)' }}>
+              {loading ? '분석 중…' : 'PC 폴더 분석하기'}
+            </button>
+            {!canPickDirectory && (
+              <div className="text-[11px] mt-2 font-medium" style={{ color: C.text4 }}>
+                Chrome 또는 Edge에서 폴더 직접 삭제가 지원됩니다. 다른 브라우저는 분석만 가능합니다.
+              </div>
+            )}
           </div>
 
-          {result.candidates.length === 0 ? (
-            <div className="rounded-[22px] bg-white p-5 shadow-card text-[13px] text-mute">
-              정리 후보가 없습니다.
+          {error && (
+            <div className="mt-3 rounded-[14px] bg-red-50 px-3 py-2.5 text-[12px] font-bold text-red-700">
+              {error}
             </div>
-          ) : (
-            <>
-              <div className="relative" style={{ minHeight: 388 }}>
-                {candidateDrag.on && candidateDrag.x < -25 && (
-                  <div className="absolute top-24 left-2 z-20 rotate-[-10deg] px-3 py-1.5 rounded-full bg-white shadow text-mute font-bold text-[13px] border"
-                       style={{ borderColor: C.border }}>
-                    보류
-                  </div>
-                )}
-                {candidateDrag.on && candidateDrag.x > 25 && (
-                  <div className="absolute top-24 right-2 z-20 rotate-[10deg] px-3 py-1.5 rounded-full text-white font-bold text-[13px]"
-                       style={{ background: C.earth, boxShadow: '0 8px 24px rgba(244,162,97,.5)' }}>
-                    삭제
-                  </div>
-                )}
-                {thirdCandidate && renderCandidateCard(thirdCandidate, {
-                  index: 2,
-                  style: { transform: 'translateY(20px) scale(.92)', opacity: .5 },
-                })}
-                {secondCandidate && renderCandidateCard(secondCandidate, {
-                  index: 1,
-                  style: { transform: 'translateY(10px) scale(.96)', opacity: .82 },
-                })}
-                {topCandidate && renderCandidateCard(topCandidate, { live: true })}
-              </div>
-              <div className="hidden">
-              {result.candidates.map((candidate, index) => {
-                const relativePath = candidate.relativePath || candidate.name;
-                const isDeleting = deletingPath === relativePath;
-                const listSize = formatBiumSize(candidate.savedMb, candidate.savedBytes);
-                const listCo2 = formatBiumCo2(candidate.co2Gram);
-
-                return (
-                  <div key={`${relativePath}-${index}`} className="rounded-[20px] bg-white p-4 shadow-card">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <div className="text-[13.5px] font-bold text-deep truncate">{candidate.name}</div>
-                        <div className="text-[11px] text-mute mt-1 truncate">{relativePath}</div>
-                        <div className="text-[11px] text-mute mt-1">{candidate.reason}</div>
-                      </div>
-                      <span className="shrink-0 rounded-full px-2 py-1 text-[10px] font-bold bg-paper2 text-deep">
-                        {candidate.riskLevel}
-                      </span>
-                    </div>
-                    <div className="mt-3 flex flex-wrap gap-1.5 text-[10.5px] font-semibold">
-                      <span className="rounded-full bg-[#D8EEDF] px-2 py-1 text-deep">{candidate.category}</span>
-                      <span className="rounded-full bg-[#FCE5CB] px-2 py-1 text-[#A85A1F]">{candidate.recommendation}</span>
-                    </div>
-                    <div className="mt-3 grid grid-cols-3 gap-2 text-[11px] num">
-                      <div className="rounded-xl bg-paper2 px-2 py-2"><b>{listSize.value}</b> {listSize.unit}</div>
-                      <div className="rounded-xl bg-paper2 px-2 py-2"><b>{listCo2.value}</b> {listCo2.unit}</div>
-                      <div className="rounded-xl bg-paper2 px-2 py-2"><b>+1</b> P</div>
-                    </div>
-                    <button
-                      className="mt-3 w-full rounded-[14px] bg-paper2 px-3 py-2 text-[12px] font-bold text-deep disabled:opacity-50"
-                      onClick={() => handleDeleteCandidate(candidate)}
-                      disabled={!deleteEnabled || isDeleting}
-                    >
-                      {isDeleting ? '삭제 중...' : deleteEnabled ? '실제 파일 삭제하기' : '삭제 권한 없음'}
-                    </button>
-                  </div>
-                );
-              })}
+          )}
+          {notice && (
+            <div className="mt-3 rounded-[14px] px-3 py-2.5 text-[12px] font-bold"
+                 style={{ background: C.bg3, color: C.primary }}>
+              {notice}
             </div>
-            </>
           )}
         </div>
       )}
+
+      {/* ─── result: card stack ─── */}
+      {result && (
+        <div className="relative flex-1 mt-4 px-[26px]" style={{ minHeight: 420 }}>
+          <LeafBurst run={burst} originX={170} originY={300}/>
+
+          {drag.on && drag.x < -25 && (
+            <div className="absolute top-32 left-9 z-10 rotate-[-12deg] px-3 py-1.5 rounded-full bg-white border font-bold text-[13px]"
+                 style={{ borderColor: C.divider, color: C.text4,
+                          boxShadow: '0 8px 18px rgba(15,26,20,.08)' }}>
+              ← 보류
+            </div>
+          )}
+          {drag.on && drag.x > 25 && (
+            <div className="absolute top-32 right-9 z-10 rotate-[12deg] px-3 py-1.5 rounded-full text-white font-bold text-[13px]"
+                 style={{ background: C.orAcc, boxShadow: '0 8px 24px rgba(244,162,97,.5)' }}>
+              삭제 →
+            </div>
+          )}
+
+          {third  && <ScannerCard candidate={third}  style={{ transform: 'translateY(20px) scale(.92)', opacity: .55 }}/>}
+          {second && <ScannerCard candidate={second} style={{ transform: 'translateY(10px) scale(.96)', opacity: .85 }}/>}
+          {top && (
+            <div onPointerDown={pStart} onPointerMove={pMove} onPointerUp={pEnd} onPointerCancel={pEnd}
+                 style={{
+                   transform: `translate(${drag.x}px, ${drag.y * 0.4}px) rotate(${drag.x * 0.06}deg)`,
+                   transition: drag.on ? 'none' : 'transform .25s cubic-bezier(.22,.61,.36,1)',
+                   touchAction: 'none',
+                   cursor: drag.on ? 'grabbing' : 'grab',
+                 }}>
+              <ScannerCard candidate={top}/>
+            </div>
+          )}
+          {!top && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6">
+              <div className="w-20 h-20 rounded-full grid place-items-center"
+                   style={{ background: C.bg3, color: C.primary }}>
+                <IconCheck size={36}/>
+              </div>
+              <div className="mt-4 text-[18px] font-bold" style={{ color: C.primary }}>
+                정리 완료!
+              </div>
+              <div className="text-[13px] mt-1" style={{ color: C.text4 }}>
+                {deletedCount.toLocaleString()}개를 정리해 +{earnedSeed.toLocaleString()} 새싹을 모았어요 🌱
+              </div>
+              <button onClick={onComplete}
+                className="mt-4 rounded-[20px] px-5 py-3 text-[13px] font-bold text-white"
+                style={{ background: G.greenBtn, boxShadow: '0px 10px 24px rgba(27,67,50,0.18)' }}>
+                결과 확인하기
+              </button>
+            </div>
+          )}
+
+          {popSeed && (
+            <div key={popSeed.ts}
+                 className="absolute left-1/2 -translate-x-1/2 top-[200px] lp-pop pointer-events-none z-40"
+                 onAnimationEnd={() => setPopSeed(null)}>
+              <div className="px-4 py-2 rounded-full text-white font-extrabold num text-[18px] flex items-center gap-1.5"
+                   style={{ background: G.orangeBtn, boxShadow: '0 12px 30px rgba(244,162,97,.5)' }}>
+                <span>🌱</span> +{popSeed.amount} 새싹
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ─── action buttons ─── */}
+      {top && (
+        <div className="px-7 pb-4 flex items-center justify-center gap-10">
+          <button onClick={skipTop}
+            className="w-[52px] h-[52px] rounded-[26px] bg-white grid place-items-center active:scale-95 transition-transform"
+            style={{ boxShadow: '0px 6px 9px rgba(15,26,20,0.08)', color: C.text4 }}>
+            <IconArchive size={22}/>
+          </button>
+          <button onClick={() => result && result.candidates.length > 1
+                              && removeTopCard((s) => s)}
+            className="w-[44px] h-[44px] rounded-[22px] bg-white grid place-items-center active:scale-95 transition-transform"
+            style={{ boxShadow: '0px 6px 9px rgba(15,26,20,0.08)', color: C.primary }}>
+            <IconSnooze size={20}/>
+          </button>
+          <button onClick={() => handleDeleteCandidate(top)}
+            disabled={Boolean(deletingPath)}
+            className="w-[64px] h-[64px] rounded-[32px] grid place-items-center text-white active:scale-95 transition-transform disabled:opacity-60"
+            style={{ background: G.orangeBtn, boxShadow: '0px 16px 16px rgba(244,162,97,0.45)' }}>
+            <IconTrash size={26}/>
+          </button>
+        </div>
+      )}
+
+      {error && result && (
+        <div className="mx-[26px] mb-3 rounded-[14px] bg-red-50 px-3 py-2.5 text-[12px] font-bold text-red-700">
+          {error}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── one card (mirrors the 05_CleanTop card design) ─────────
+function ScannerCard({ candidate, style }) {
+  const m = metaFor(candidate.category);
+  const safe = safetyPct(candidate.riskLevel);
+  const relativePath = candidate.relativePath || candidate.name;
+  const earn = candidate.seed ?? candidate.point ?? 1;
+  const co2g = candidate.co2Gram ?? 0;
+  const sizeText = formatBiumSize(candidate.savedMb, candidate.savedBytes);
+
+  return (
+    <div className="absolute left-[26px] right-[26px] rounded-[28px] bg-white"
+         style={{ ...style, height: 420, border: `1px solid ${C.divider}`,
+                  boxShadow: '0px 24px 48px rgba(15,26,20,0.1)' }}>
+      <div className="p-5">
+        <div className="flex items-center justify-between">
+          <Pill tone="paper">{m.kind}</Pill>
+          <Pill tone="sage" icon={<IconShield size={11}/>}>안전 {safe}%</Pill>
+        </div>
+
+        <div className="mt-4 flex items-center gap-3">
+          <BrandMark glyph={m.glyph} palette={m.tint} size={56} ring/>
+          <div className="flex-1 min-w-0">
+            <div className="text-[17px] font-extrabold tracking-tight truncate"
+                 style={{ color: C.primary, letterSpacing: '-0.25px' }}>
+              {candidate.name}
+            </div>
+            <div className="text-[11px] mt-0.5 truncate font-medium" style={{ color: C.text4 }}>
+              {relativePath}
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-4 rounded-[16px] p-3.5" style={{ background: C.infoBg }}>
+          <div className="flex items-center gap-1.5">
+            <IconSparkles size={12} style={{ color: '#3A3CA3' }}/>
+            <span className="text-[11px] font-bold" style={{ color: '#3A3CA3' }}>AI 분석</span>
+          </div>
+          <div className="mt-1.5 text-[12px] leading-[18px] font-medium" style={{ color: C.text2 }}>
+            {candidate.reason}
+          </div>
+        </div>
+
+        <div className="mt-4 grid grid-cols-3 gap-2">
+          <ScannerMetric v={sizeText}                 l="용량"/>
+          <ScannerMetric v={formatBiumCo2(co2g)}      l="탄소"/>
+          <ScannerMetric v={`+${earn} 🌱`}            l="획득 새싹"/>
+        </div>
+
+        <div className="absolute left-5 right-5 bottom-5">
+          <div className="rounded-[16px] px-3.5 py-3 flex items-center justify-between"
+               style={{ background: G.rewardOrange,
+                        boxShadow: '0px 4px 8px rgba(0,0,0,0.06)' }}>
+            <span className="text-[11px] font-bold uppercase tracking-wider"
+                  style={{ color: C.orDark, letterSpacing: '0.5px' }}>
+              보상 미리보기
+            </span>
+            <div className="flex items-center gap-2">
+              <span className="num font-extrabold text-[14px] flex items-center gap-1"
+                    style={{ color: C.mid }}>
+                + {earn} 🌱 새싹
+              </span>
+              <span className="text-[12px] font-bold" style={{ color: C.primary }}>
+                · {formatBiumCo2(co2g)}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ScannerMetric({ v, l }) {
+  return (
+    <div className="rounded-[12px] py-2 text-center"
+         style={{ background: '#FAFBF7',
+                  boxShadow: '0px 1px 5px rgba(0,0,0,0.06)' }}>
+      <div className="text-[11.5px] font-bold num leading-tight"
+           style={{ color: C.primary }}>{v}</div>
+      <div className="text-[10px] mt-0.5 leading-tight font-medium"
+           style={{ color: C.text4 }}>{l}</div>
     </div>
   );
 }
