@@ -1,16 +1,11 @@
-// 비움/새싹 — PC folder scanner. Real backend integration
-// (POST /api/bium/files/analyze) but styled with the 05_CleanTop
-// card-stack UX from the redesign.
+// 비움/새싹 — PC folder scanner. All analysis runs locally in the
+// browser; nothing about the user's files leaves the device.
+// (backend/main.py still exists for server-side reuse — e.g. a future
+// mobile client — but is not called from this UI.)
 
 const { useRef: useRefScanner, useState: useStateScanner } = React;
 
-const BIUM_ANALYZE_ENDPOINTS = [
-  'https://saessak.onrender.com/api/bium/files/analyze',
-  '/api/bium/files/analyze',
-  'http://localhost:8080/api/bium/files/analyze',
-];
-
-// ─── Helpers ──────────────────────────────────────────────────────
+// ─── Helpers (format / metadata) ──────────────────────────────────
 function getBiumExtension(name) {
   const parts = name.split('.');
   return parts.length > 1 ? parts.pop().toLowerCase() : '';
@@ -44,22 +39,162 @@ function toBiumMetadata(file, relativePath) {
   };
 }
 
-async function analyzeBiumFiles(files) {
-  let lastError = null;
-  for (const endpoint of BIUM_ANALYZE_ENDPOINTS) {
-    try {
-      const response = await fetch(endpoint, {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ files }),
-      });
-      if (!response.ok) throw new Error(`Analyze API failed: ${response.status}`);
-      return await response.json();
-    } catch (error) {
-      lastError = error;
+// ═══════════════════════════════════════════════════════════════════
+// Local analysis — 1:1 port of `backend/main.py`
+// Keeps the same response shape so the rest of the UI is unchanged.
+// ═══════════════════════════════════════════════════════════════════
+
+const DUPLICATE_KEYWORDS = ['copy', 'copied', 'duplicate', '복사본', '사본', 'final_final', '수정본'];
+const ONE_YEAR_MS         = 365 * 24 * 60 * 60 * 1000;
+const LARGE_FILE_BYTES    = 100 * 1024 * 1024;       // 100 MB
+const CO2_GRAM_PER_MB     = 4.0;                     // 1MB ≈ 4g CO₂
+const BYTES_PER_POINT     = 100 * 1024;              // 100KB → 1 새싹
+const CO2_GRAM_PER_RAMEN  = 1000.0;                  // 라면 1개 ≈ 1,000g CO₂
+
+function round6(n) { return Math.round(n * 1e6) / 1e6; }
+
+function splitName(name) {
+  const i = (name || '').lastIndexOf('.');
+  if (i < 0) return [name || '', ''];
+  return [name.slice(0, i), name.slice(i + 1).toLowerCase()];
+}
+
+function hasDuplicateKeyword(name) {
+  const lower = (name || '').toLowerCase();
+  return DUPLICATE_KEYWORDS.some(k => lower.includes(k));
+}
+
+function normalizedDuplicateKey(file) {
+  const [baseRaw, extRaw] = splitName((file.name || '').toLowerCase());
+  let base = baseRaw
+    .replace(/\s*\(\d+\)$/, '')
+    .replace(/[\s._-]+copy(?:\s*\d+)?$/, '')
+    .replace(/[\s._-]+copied(?:\s*\d+)?$/, '')
+    .replace(/[\s._-]+duplicate(?:\s*\d+)?$/, '')
+    .split('final_final').join('final')
+    .split('복사본').join('')
+    .split('사본').join('')
+    .split('수정본').join('')
+    .replace(/[\s._-]+/g, ' ')
+    .trim();
+  const ext = ((file.extension || extRaw || '') + '').toLowerCase().replace(/^\.+/, '');
+  return `${base}.${ext}`;
+}
+
+function detectDuplicateIndexes(files) {
+  const dup = new Set();
+
+  // 1) exact match — same name (case-insensitive) + same size
+  const exactGroups = new Map();
+  files.forEach((f, idx) => {
+    const key = `${(f.name || '').toLowerCase()}|${f.sizeBytes}`;
+    if (!exactGroups.has(key)) exactGroups.set(key, []);
+    exactGroups.get(key).push(idx);
+  });
+  exactGroups.forEach((indexes) => {
+    if (indexes.length > 1) for (let i = 1; i < indexes.length; i++) dup.add(indexes[i]);
+  });
+
+  // 2) similar name (normalized) + size within 2%
+  const similarGroups = new Map();
+  files.forEach((f, idx) => {
+    const key = normalizedDuplicateKey(f);
+    if (!similarGroups.has(key)) similarGroups.set(key, []);
+    similarGroups.get(key).push(idx);
+  });
+  similarGroups.forEach((indexes) => {
+    if (indexes.length < 2) return;
+    // pick the "original": one WITHOUT a duplicate keyword, lowest index.
+    const sorted = [...indexes].sort((a, b) => {
+      const ak = hasDuplicateKeyword(files[a].name) ? 1 : 0;
+      const bk = hasDuplicateKeyword(files[b].name) ? 1 : 0;
+      return ak !== bk ? ak - bk : a - b;
+    });
+    const originalIdx = sorted[0];
+    for (const idx of indexes) {
+      if (idx === originalIdx || dup.has(idx)) continue;
+      for (const otherIdx of indexes) {
+        if (otherIdx === idx) continue;
+        const bigger  = Math.max(files[idx].sizeBytes, files[otherIdx].sizeBytes, 1);
+        const smaller = Math.min(files[idx].sizeBytes, files[otherIdx].sizeBytes);
+        if (smaller / bigger >= 0.98) { dup.add(idx); break; }
+      }
     }
-  }
-  throw lastError || new Error('Analyze API request failed');
+  });
+
+  // 3) anything with a duplicate keyword in its name
+  files.forEach((f, idx) => { if (hasDuplicateKeyword(f.name)) dup.add(idx); });
+
+  return dup;
+}
+
+function candidateReason(category) {
+  if (category === 'DUPLICATE_CANDIDATE') return '이름 또는 용량이 유사한 중복 후보입니다.';
+  if (category === 'OLD_LARGE_FILE')      return '1년 이상 수정되지 않았고 100MB 이상인 대용량 파일입니다.';
+  if (category === 'LARGE_FILE')          return '100MB 이상인 대용량 파일입니다.';
+  return '1년 이상 수정되지 않은 파일입니다.';
+}
+
+function riskLevel(category) { return category === 'OLD_LARGE_FILE' ? 'MEDIUM' : 'LOW'; }
+
+function analyzeBiumFiles(files) {
+  const now = Date.now();
+  const dup = detectDuplicateIndexes(files);
+  const candidates = [];
+
+  files.forEach((file, idx) => {
+    const modifiedMs = file.lastModified ? Date.parse(file.lastModified) : NaN;
+    const isOld       = Number.isFinite(modifiedMs) && (now - modifiedMs) >= ONE_YEAR_MS;
+    const isLarge     = file.sizeBytes >= LARGE_FILE_BYTES;
+    const isDuplicate = dup.has(idx);
+
+    let category = null;
+    if (isDuplicate)           category = 'DUPLICATE_CANDIDATE';
+    else if (isOld && isLarge) category = 'OLD_LARGE_FILE';
+    else if (isLarge)          category = 'LARGE_FILE';
+    else if (isOld)            category = 'OLD_FILE';
+
+    if (!category) return;
+
+    const savedBytes = file.sizeBytes;
+    const savedMbRaw = savedBytes / 1024 / 1024;
+    const co2GramRaw = savedMbRaw * CO2_GRAM_PER_MB;
+    const point = Math.max(1, Math.round(savedBytes / BYTES_PER_POINT));
+
+    candidates.push({
+      name:           file.name,
+      relativePath:   file.relativePath || file.name,
+      category,
+      riskLevel:      riskLevel(category),
+      recommendation: '직접 확인 후 삭제 추천',
+      reason:         candidateReason(category),
+      savedBytes,
+      savedMb:        round6(savedMbRaw),
+      co2Gram:        round6(co2GramRaw),
+      point,
+      seed:           point,
+    });
+  });
+
+  const totalBytes        = candidates.reduce((s, c) => s + c.savedBytes, 0);
+  const estimatedSavedMb  = round6(totalBytes / 1024 / 1024);
+  const estimatedCo2Gram  = round6(totalBytes / 1024 / 1024 * CO2_GRAM_PER_MB);
+  const totalSeed         = candidates.reduce((s, c) => s + c.point, 0);
+  const ramenCount        = Math.round(estimatedCo2Gram / CO2_GRAM_PER_RAMEN * 10) / 10;
+
+  return {
+    summary: {
+      totalFiles:          files.length,
+      cleanableFiles:      candidates.length,
+      estimatedSavedBytes: totalBytes,
+      estimatedSavedMb,
+      estimatedCo2Gram,
+      earnedPoint:         totalSeed,
+      earnedSeed:          totalSeed,
+      ramenCount,
+    },
+    candidates,
+  };
 }
 
 async function collectBiumDirectoryFiles(directoryHandle, basePath, entries) {
@@ -132,11 +267,14 @@ function BiumFileScanner({ onBack, onCleaned, onComplete }) {
     const metadata = entries.map((entry) => toBiumMetadata(entry.file, entry.relativePath));
     fileEntryMapRef.current = new Map(entries.map((entry) => [entry.relativePath, entry]));
     setLoading(true);
+    // Yield once so the loading state can paint before the (potentially
+    // heavy) duplicate-detection loop runs on the same thread.
+    await new Promise((r) => setTimeout(r, 0));
     try {
-      const analysis = await analyzeBiumFiles(metadata);
+      const analysis = analyzeBiumFiles(metadata);
       setResult(analysis);
     } catch {
-      setError('분석 API 요청에 실패했습니다. 백엔드가 실행 중인지 확인해주세요.');
+      setError('분석 중 문제가 발생했습니다. 다른 폴더로 다시 시도해주세요.');
     } finally {
       setLoading(false);
     }
@@ -345,7 +483,7 @@ function BiumFileScanner({ onBack, onCleaned, onComplete }) {
               PC 폴더 분석 시작
             </div>
             <div className="text-[12px] mt-1 leading-relaxed font-medium" style={{ color: C.text3 }}>
-              선택한 폴더 안의 중복, 대용량, 오래된 파일을 AI가 찾아드려요. 파일 원본은 업로드되지 않고, 파일명·용량·수정일만 분석합니다.
+              선택한 폴더 안의 중복, 대용량, 오래된 파일을 AI가 찾아드려요. 모든 분석은 브라우저 안에서만 실행되고, 파일명·용량·수정일을 포함한 어떤 정보도 외부로 전송되지 않아요.
             </div>
             <button onClick={handlePickFolder} disabled={loading}
               className="mt-4 w-full rounded-[18px] px-4 py-3.5 text-[13px] font-bold text-white disabled:opacity-60"
