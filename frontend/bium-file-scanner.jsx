@@ -184,6 +184,17 @@ function BiumFileScanner({ onBack, onCleaned, onComplete }) {
     setDrag({ x: 0, y: 0, on: false });
   };
 
+  // "나중에 정리하기" — 현재 카드를 후보 목록 맨 뒤로 보낸다.
+  // 결정을 잠시 미룰 뿐 카운트나 누적 새싹에는 영향 없음.
+  const postponeTopCard = () => {
+    setResult((previous) => {
+      if (!previous || previous.candidates.length < 2) return previous;
+      const [first, ...rest] = previous.candidates;
+      return { ...previous, candidates: [...rest, first] };
+    });
+    setDrag({ x: 0, y: 0, on: false });
+  };
+
   const updateSummaryAfterDelete = (summary, candidate) => {
     if (!summary || !candidate) return summary;
     return {
@@ -435,11 +446,12 @@ function BiumFileScanner({ onBack, onCleaned, onComplete }) {
             style={{ boxShadow: '0px 6px 9px rgba(15,26,20,0.08)', color: C.text4 }}>
             <IconArchive size={22}/>
           </button>
-          <button onClick={() => result && result.candidates.length > 1
-                              && removeTopCard((s) => s)}
-            className="w-[44px] h-[44px] rounded-[22px] bg-white grid place-items-center active:scale-95 transition-transform"
+          <button onClick={postponeTopCard}
+            title="나중에 정리하기"
+            disabled={!result || result.candidates.length < 2}
+            className="w-[44px] h-[44px] rounded-[22px] bg-white grid place-items-center active:scale-95 transition-transform disabled:opacity-40"
             style={{ boxShadow: '0px 6px 9px rgba(15,26,20,0.08)', color: C.primary }}>
-            <IconSnooze size={20}/>
+            <IconClock size={20}/>
           </button>
           <button onClick={() => handleDeleteCandidate(top)}
             disabled={Boolean(deletingPath)}

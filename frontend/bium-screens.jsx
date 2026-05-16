@@ -443,6 +443,12 @@ function CleanScreen({ onCleaned, onTrashBin, onPcScanner, onComplete }) {
     }
   }
 
+  // "나중에 정리하기" — 현재 카드를 스택 맨 뒤로 보냄. 정리·보관 결정을 미룸.
+  function postpone() {
+    setStack(s => s.length > 1 ? [...s.slice(1), s[0]] : s);
+    setDrag({ x: 0, y: 0, on: false });
+  }
+
   function pStart(e) {
     dragRef.current = { startX: e.clientX, startY: e.clientY, dragging: true };
     setDrag(d => ({ ...d, on: true }));
@@ -591,9 +597,12 @@ function CleanScreen({ onCleaned, onTrashBin, onPcScanner, onComplete }) {
             style={{ boxShadow: '0px 6px 9px rgba(15,26,20,0.08)', color: C.text4 }}>
             <IconArchive size={22}/>
           </button>
-          <button className="w-[44px] h-[44px] rounded-[22px] bg-white grid place-items-center active:scale-95 transition-transform"
+          <button onClick={postpone}
+            title="나중에 정리하기"
+            disabled={stack.length < 2}
+            className="w-[44px] h-[44px] rounded-[22px] bg-white grid place-items-center active:scale-95 transition-transform disabled:opacity-40"
             style={{ boxShadow: '0px 6px 9px rgba(15,26,20,0.08)', color: C.primary }}>
-            <IconSnooze size={20}/>
+            <IconClock size={20}/>
           </button>
           <button onClick={() => commit('right')}
             className="w-[64px] h-[64px] rounded-[32px] grid place-items-center text-white active:scale-95 transition-transform"
