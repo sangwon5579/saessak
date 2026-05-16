@@ -135,7 +135,9 @@ npx serve . -l 8000             # Node
     "estimatedSavedBytes": 2481024,
     "estimatedSavedMb": 2.366028,
     "estimatedCo2Gram": 9.464111,
-    "earnedPoint": 24
+    "earnedPoint": 24,
+    "earnedSeed": 24,
+    "ramenCount": 0.0
   },
   "candidates": [
     {
@@ -148,11 +150,15 @@ npx serve . -l 8000             # Node
       "savedBytes": 2481024,
       "savedMb": 2.366028,
       "co2Gram": 9.464111,
-      "point": 24
+      "point": 24,
+      "seed": 24
     }
   ]
 }
 ```
+
+> **호환 표기:** `point`/`seed`와 `earnedPoint`/`earnedSeed`는 같은 값입니다.
+> 새 디자인은 "새싹(seed)" 용어를 쓰지만 구 클라이언트는 `point`를 계속 읽을 수 있습니다.
 
 ## 분석 로직
 
@@ -168,7 +174,8 @@ npx serve . -l 8000             # Node
 **추정 기준**
 
 - 탄소 배출량: `1MB ≈ 4g CO₂`
-- 적립 포인트: `100KB당 1포인트` (후보당 최소 1포인트)
+- 적립 포인트(= 새싹): `100KB당 1포인트` (후보당 최소 1포인트)
+- 라면 환산: `1,000g CO₂ ≈ 라면 1개` (홈/완료 화면 카드 표기용)
 
 ## 배포
 

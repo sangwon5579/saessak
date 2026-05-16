@@ -55,6 +55,8 @@ LARGE_FILE_BYTES = 100 * 1024 * 1024
 
 CO2_GRAM_PER_MB = 4.0
 BYTES_PER_POINT = 100 * 1024
+# 라면 1개 끓이는 데 약 1,000 g CO2 (디자인 내러티브용 환산).
+CO2_GRAM_PER_RAMEN = 1000.0
 
 
 def split_name(name: str) -> Tuple[str, str]:
@@ -179,13 +181,19 @@ def analyze_files(payload: AnalyzeRequest):
                 "savedBytes": saved_bytes,
                 "savedMb": round(saved_mb_raw, 6),
                 "co2Gram": round(co2_gram_raw, 6),
+                # 새 디자인은 "포인트"를 "새싹"으로 부른다. 둘 다 같은 값을 노출해
+                # 구 클라이언트(point)와 신 클라이언트(seed) 모두 호환되게 유지한다.
                 "point": point,
+                "seed": point,
             }
         )
 
     total_bytes = sum(item["savedBytes"] for item in candidates)
     estimated_saved_mb = round(total_bytes / 1024 / 1024, 6)
     estimated_co2_gram = round(total_bytes / 1024 / 1024 * CO2_GRAM_PER_MB, 6)
+    total_seed = sum(item["point"] for item in candidates)
+    # 디자인의 라면(🍜) 환산 — 소수 1자리.
+    ramen_count = round(estimated_co2_gram / CO2_GRAM_PER_RAMEN, 1)
 
     return {
         "summary": {
@@ -194,7 +202,11 @@ def analyze_files(payload: AnalyzeRequest):
             "estimatedSavedBytes": total_bytes,
             "estimatedSavedMb": estimated_saved_mb,
             "estimatedCo2Gram": estimated_co2_gram,
-            "earnedPoint": sum(item["point"] for item in candidates),
+            # point/seed 둘 다 노출 → 구·신 클라이언트 모두 호환.
+            "earnedPoint": total_seed,
+            "earnedSeed": total_seed,
+            # 디자인 카드("🍜 라면 N개 끓일 수 있는 탄소를 아꼈어요")용 환산값.
+            "ramenCount": ramen_count,
         },
         "candidates": candidates,
     }
