@@ -49,16 +49,18 @@ function HomeScreen({ saessakToday, saessakTotal, todayCO2g, areas, onCleanTap, 
 
       {/* ─── ramen equivalence card ───────────── */}
       <div className="px-[26px] mt-[14px]">
-        <div className="bg-white rounded-[18px] px-6 py-[17px] flex items-center gap-5"
+        <div className="bg-white rounded-[18px] px-4 py-[14px] flex items-center gap-3"
              style={{ boxShadow: '0px 6px 9px rgba(15,26,20,0.05)' }}>
-          <span className="text-[40px] leading-none">🍜</span>
-          <div className="flex items-baseline gap-2.5">
-            <span className="text-[14px] font-semibold" style={{ color: C.orPri }}>라면</span>
-            <span className="num font-extrabold text-[22px] leading-none"
-                  style={{ color: C.primary, letterSpacing: '-0.44px' }}>
+          <span className="text-[32px] leading-none shrink-0">🍜</span>
+          <div className="flex items-baseline gap-1.5 flex-1 min-w-0">
+            <span className="text-[13px] font-semibold whitespace-nowrap"
+                  style={{ color: C.orPri }}>라면</span>
+            <span className="num font-extrabold text-[20px] leading-none whitespace-nowrap"
+                  style={{ color: C.primary, letterSpacing: '-0.4px' }}>
               {ramen}
             </span>
-            <span className="text-[12px] font-semibold" style={{ color: C.text4 }}>
+            <span className="text-[11px] font-semibold whitespace-nowrap"
+                  style={{ color: C.text4 }}>
               개 끓일 수 있는 탄소를 아꼈어요
             </span>
           </div>
@@ -462,7 +464,7 @@ function CleanScreen({ onCleaned, onTrashBin, onPcScanner, onComplete }) {
   const third = stack[2];
 
   return (
-    <div className="screen-in h-full flex flex-col relative">
+    <div className="screen-in pb-8 relative">
       {/* ─── header ─────────────────────────── */}
       <div className="px-[26px] pt-3 flex items-start justify-between">
         <div>
@@ -520,7 +522,7 @@ function CleanScreen({ onCleaned, onTrashBin, onPcScanner, onComplete }) {
       )}
 
       {/* ─── card stack ────────────────────── */}
-      <div className="relative flex-1 mt-4 px-[26px]" style={{ minHeight: 420 }}>
+      <div className="relative mt-4 px-[26px]" style={{ height: 440 }}>
         <LeafBurst run={burst} originX={170} originY={300}/>
 
         {/* swipe hints */}
@@ -886,16 +888,18 @@ function CleanCompleteScreen({ earnedSeed, earnedCO2g, onMarket, onHome }) {
 
       {/* ramen card */}
       <div className="px-[26px] mt-7">
-        <div className="bg-white rounded-[18px] px-6 py-[17px] flex items-center gap-5"
+        <div className="bg-white rounded-[18px] px-4 py-[14px] flex items-center gap-3"
              style={{ boxShadow: '0px 6px 9px rgba(15,26,20,0.05)' }}>
-          <span className="text-[40px] leading-none">🍜</span>
-          <div className="flex items-baseline gap-2.5">
-            <span className="text-[14px] font-semibold" style={{ color: C.orPri }}>라면</span>
-            <span className="num font-extrabold text-[22px] leading-none"
-                  style={{ color: C.primary, letterSpacing: '-0.44px' }}>
+          <span className="text-[32px] leading-none shrink-0">🍜</span>
+          <div className="flex items-baseline gap-1.5 flex-1 min-w-0">
+            <span className="text-[13px] font-semibold whitespace-nowrap"
+                  style={{ color: C.orPri }}>라면</span>
+            <span className="num font-extrabold text-[20px] leading-none whitespace-nowrap"
+                  style={{ color: C.primary, letterSpacing: '-0.4px' }}>
               {ramen}
             </span>
-            <span className="text-[12px] font-semibold" style={{ color: C.text4 }}>
+            <span className="text-[11px] font-semibold whitespace-nowrap"
+                  style={{ color: C.text4 }}>
               개 끓일 수 있는 탄소를 아꼈어요
             </span>
           </div>

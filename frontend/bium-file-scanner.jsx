@@ -279,7 +279,7 @@ function BiumFileScanner({ onBack, onCleaned, onComplete }) {
   const remaining = (result && result.candidates.length) || 0;
 
   return (
-    <div className="screen-in h-full flex flex-col relative">
+    <div className="screen-in pb-8 relative">
       {/* ─── header (matches CleanScreen) ─── */}
       <div className="px-[26px] pt-3 flex items-start justify-between">
         <div className="flex items-center gap-2">
@@ -320,7 +320,7 @@ function BiumFileScanner({ onBack, onCleaned, onComplete }) {
 
       {/* ─── empty state (no result yet) ─── */}
       {!result && (
-        <div className="px-[26px] mt-5 flex-1">
+        <div className="px-[26px] mt-5">
           <input ref={inputRef} type="file" className="hidden"
                  multiple webkitdirectory="" onChange={handleFiles}/>
 
@@ -364,7 +364,7 @@ function BiumFileScanner({ onBack, onCleaned, onComplete }) {
 
       {/* ─── result: card stack ─── */}
       {result && (
-        <div className="relative flex-1 mt-4 px-[26px]" style={{ minHeight: 420 }}>
+        <div className="relative mt-4 px-[26px]" style={{ height: 440 }}>
           <LeafBurst run={burst} originX={170} originY={300}/>
 
           {drag.on && drag.x < -25 && (
