@@ -1365,7 +1365,9 @@ function RewardInfoRow({ icon, title, sub }) {
 // ═══════════════════════════════════════════════════════════════════════
 
 function ConnectScreen({ accounts, onToggle, onAddAccount }) {
-  const connected = accounts.filter(a => a.connected).length;
+  // 토글이 켜진(on=true) 계정 수가 진척률 카운터에 반영됨.
+  // 사용자가 토글을 끄고 켤 때마다 즉시 갱신.
+  const connected = accounts.filter(a => a.connected && a.on).length;
   const total = 5;
   return (
     <div className="screen-in pb-8">
@@ -1413,7 +1415,7 @@ function ConnectScreen({ accounts, onToggle, onAddAccount }) {
       {/* ─── sections ─────────────────── */}
       <ConnectSection
         title="이메일" icon={IconMail} iconBg={C.orSoft}
-        connectedCount={accounts.filter(a => a.kind === 'email' && a.connected).length}
+        connectedCount={accounts.filter(a => a.kind === 'email' && a.connected && a.on).length}
         accounts={accounts.filter(a => a.kind === 'email')}
         onToggle={onToggle}
         addLabel="메일 계정 추가하기"
@@ -1421,7 +1423,7 @@ function ConnectScreen({ accounts, onToggle, onAddAccount }) {
       />
       <ConnectSection
         title="Cloud 사진" icon={IconImage} iconBg={C.sage}
-        connectedCount={accounts.filter(a => a.kind === 'photo' && a.connected).length}
+        connectedCount={accounts.filter(a => a.kind === 'photo' && a.connected && a.on).length}
         accounts={accounts.filter(a => a.kind === 'photo')}
         onToggle={onToggle}
         addLabel="사진 계정 추가하기"
@@ -1429,7 +1431,7 @@ function ConnectScreen({ accounts, onToggle, onAddAccount }) {
       />
       <ConnectSection
         title="Cloud 파일" icon={IconFolder} iconBg={C.mid}
-        connectedCount={accounts.filter(a => a.kind === 'file' && a.connected).length}
+        connectedCount={accounts.filter(a => a.kind === 'file' && a.connected && a.on).length}
         accounts={accounts.filter(a => a.kind === 'file')}
         onToggle={onToggle}
         addLabel="파일 계정 추가하기"
