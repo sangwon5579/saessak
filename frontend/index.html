@@ -157,6 +157,20 @@
     100% { transform: translateY(-12px) rotate(40deg); opacity: .7; }
   }
   .confetti-anim { animation: confettiFloat 1.8s ease-in-out infinite alternate; }
+
+  /* splash loading bar — fills 0 → 100% during 2s startup */
+  @keyframes splashFill {
+    0%   { width: 0%; }
+    100% { width: 100%; }
+  }
+  .splash-fill { animation: splashFill 1.9s cubic-bezier(.22,.61,.36,1) forwards; }
+
+  /* fade-out used to dismiss the splash before the home screen takes over */
+  @keyframes splashOut {
+    from { opacity: 1; transform: scale(1); }
+    to   { opacity: 0; transform: scale(1.02); }
+  }
+  .splash-out { animation: splashOut .35s ease-out forwards; }
 </style>
 </head>
 <body>

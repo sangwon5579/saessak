@@ -311,6 +311,77 @@ function TierIcon({ size = 36, tone = 'light' }) {
   );
 }
 
+// — 새싹 launch logo: leaf cluster + orange "P" point badge —
+// Approximation of the IR-deck cover logo, drawn as inline SVG so it
+// works offline and doesn't expire like Figma asset URLs.
+function SaessakLogo({ size = 110 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 120 120">
+      <defs>
+        <linearGradient id="ssLeafA" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%"  stopColor="#B7E4C7"/>
+          <stop offset="55%" stopColor="#74C69D"/>
+          <stop offset="100%" stopColor="#2D6A4F"/>
+        </linearGradient>
+        <linearGradient id="ssLeafB" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%"  stopColor="#95D5B2"/>
+          <stop offset="100%" stopColor="#1B4332"/>
+        </linearGradient>
+        <linearGradient id="ssLeafC" x1="0" y1="1" x2="1" y2="0">
+          <stop offset="0%"  stopColor="#52B788"/>
+          <stop offset="100%" stopColor="#B7E4C7"/>
+        </linearGradient>
+      </defs>
+
+      {/* sparkle dots around the cluster */}
+      <circle cx="18"  cy="22"  r="1.6" fill="#52B788" opacity=".75"/>
+      <circle cx="102" cy="28"  r="1.6" fill="#52B788" opacity=".75"/>
+      <circle cx="20"  cy="68"  r="1.2" fill="#74C69D" opacity=".65"/>
+      <circle cx="106" cy="74"  r="1.4" fill="#74C69D" opacity=".65"/>
+      <circle cx="60"  cy="10"  r="1.0" fill="#95D5B2" opacity=".85"/>
+      <circle cx="14"  cy="48"  r="1.0" fill="#95D5B2" opacity=".5"/>
+      <line x1="100" y1="14" x2="104" y2="10" stroke="#52B788" strokeWidth="1.4" strokeLinecap="round"/>
+      <line x1="16"  y1="100" x2="12" y2="104" stroke="#52B788" strokeWidth="1.2" strokeLinecap="round"/>
+      <line x1="110" y1="55"  x2="114" y2="55" stroke="#74C69D" strokeWidth="1.2" strokeLinecap="round"/>
+
+      {/* central stem */}
+      <path d="M 60 100 C 60 82, 60 64, 60 48"
+            stroke="#2D6A4F" strokeWidth="2.6" fill="none" strokeLinecap="round"/>
+
+      {/* leaf — upper-left */}
+      <path d="M 58 52
+               C 38 44, 22 38, 18 22
+               C 38 24, 56 36, 60 50 Z"
+            fill="url(#ssLeafA)"/>
+
+      {/* leaf — upper-right */}
+      <path d="M 62 52
+               C 82 44, 100 38, 102 22
+               C 82 24, 64 36, 60 50 Z"
+            fill="url(#ssLeafB)"/>
+
+      {/* leaf — top center (narrow vertical) */}
+      <path d="M 60 48
+               C 54 30, 56 14, 68 6
+               C 72 22, 66 38, 60 50 Z"
+            fill="url(#ssLeafC)" opacity=".95"/>
+
+      {/* leaf — lower spread (small accent) */}
+      <path d="M 60 66
+               C 46 66, 32 72, 28 84
+               C 44 80, 56 76, 60 70 Z"
+            fill="url(#ssLeafB)" opacity=".55"/>
+
+      {/* P badge (point) */}
+      <circle cx="92" cy="86" r="13" fill="#F4A261"
+              stroke="#fff" strokeWidth="2.5"/>
+      <text x="92" y="91.5" textAnchor="middle"
+            fontSize="16" fontWeight="800"
+            fill="#fff" fontFamily="Inter, sans-serif">P</text>
+    </svg>
+  );
+}
+
 // — Brand letter circle (Gmail "G", Outlook "O", iCloud "i") —
 function BrandLetter({ letter, color, size = 36, bg = '#fff' }) {
   return (
@@ -346,4 +417,5 @@ Object.assign(window, {
   IconCalendar, IconUser,
   // illustrations
   LeafBig, TrashCanIllustration, CoffeeCupIllustration, TierIcon, BrandLetter,
+  SaessakLogo,
 });

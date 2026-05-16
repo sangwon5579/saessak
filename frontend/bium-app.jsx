@@ -80,6 +80,41 @@ function BottomNav({ active, onChange }) {
   );
 }
 
+// ─── Splash / launch screen ──────────────────────────────────
+// Shown for ~2 seconds on first mount and on page refresh.
+// Layout: logo PNG → tagline → progress bar → "loading ..." text.
+// Z-index sits ABOVE the bottom nav / content but BELOW the iOS
+// status bar + dynamic island so 9:41 and battery still peek through.
+function SplashScreen({ closing }) {
+  return (
+    <div className={`absolute inset-0 flex flex-col items-center justify-center px-8 ${closing ? 'splash-out' : 'screen-in'}`}
+         style={{ background: C.base, zIndex: 35 }}>
+      {/* logo (PNG with transparent background — lives under frontend/public/) */}
+      <img src="public/logo.png" alt="새싹 로고"
+           style={{ width: 160, height: 160, objectFit: 'contain' }}/>
+
+      {/* tagline */}
+      <div className="mt-2 text-[13px] font-medium text-center"
+           style={{ color: C.text3 }}>
+        디지털 탄소를 지우고, 포인트로 보상받아요
+      </div>
+
+      {/* progress bar */}
+      <div className="mt-6 w-[180px] h-[5px] rounded-full overflow-hidden"
+           style={{ background: '#E4E7DD' }}>
+        <div className="h-full splash-fill"
+             style={{ background: 'linear-gradient(90deg, #74C69D, #2D6A4F)',
+                      borderRadius: 9999 }}/>
+      </div>
+
+      {/* loading label */}
+      <div className="mt-3 text-[12px] font-medium" style={{ color: C.text2 }}>
+        loading ...
+      </div>
+    </div>
+  );
+}
+
 // ─── Toast ─────────────────────────────────────────────────────
 function Toast({ msg }) {
   if (!msg) return null;
@@ -99,6 +134,15 @@ function Toast({ msg }) {
 // App
 // ═══════════════════════════════════════════════════════════════════
 function App() {
+  // Splash gate: shown for 2 s on first mount. `closing` runs a 0.35 s
+  // fade-out so the home screen doesn't pop in too abruptly.
+  const [splash, setSplash]   = useState('on');     // 'on' | 'closing' | 'off'
+  React.useEffect(() => {
+    const t1 = setTimeout(() => setSplash('closing'), 2000);
+    const t2 = setTimeout(() => setSplash('off'),     2350);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
+  }, []);
+
   const [screen, setScreen]   = useState('home');
   const [reward, setReward]   = useState(null);  // for rewardsDetail
   const [seedTotal, setSeedTotal] = useState(2340);
@@ -235,7 +279,12 @@ function App() {
         </div>
 
         <Toast msg={toast}/>
-        {!hideNav(screen) && <BottomNav active={tabFor(screen)} onChange={onTabChange}/>}
+        {splash === 'off' && !hideNav(screen) && (
+          <BottomNav active={tabFor(screen)} onChange={onTabChange}/>
+        )}
+
+        {/* splash overlay — covers everything except status bar / home indicator */}
+        {splash !== 'off' && <SplashScreen closing={splash === 'closing'}/>}
 
         {/* home indicator */}
         <div style={{
