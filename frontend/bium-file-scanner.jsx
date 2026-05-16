@@ -415,7 +415,9 @@ function BiumFileScanner({ onBack, onCleaned, onComplete }) {
                 정리 완료!
               </div>
               <div className="text-[13px] mt-1" style={{ color: C.text4 }}>
-                {deletedCount.toLocaleString()}개를 정리해 +{earnedSeed.toLocaleString()} 새싹을 모았어요 🌱
+                {deletedCount === 0
+                  ? '해당 폴더에는 정리 대상 파일이 없어요'
+                  : `${deletedCount.toLocaleString()}개를 정리해 +${earnedSeed.toLocaleString()} 새싹을 모았어요 🌱`}
               </div>
               <button onClick={onComplete}
                 className="mt-4 rounded-[20px] px-5 py-3 text-[13px] font-bold text-white"
