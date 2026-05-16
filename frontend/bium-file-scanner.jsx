@@ -508,19 +508,19 @@ function ScannerCard({ candidate, style }) {
         </div>
 
         <div className="absolute left-5 right-5 bottom-5">
-          <div className="rounded-[16px] px-3.5 py-3 flex items-center justify-between"
+          <div className="rounded-[16px] px-3 py-2.5 flex items-center justify-between gap-2"
                style={{ background: G.rewardOrange,
                         boxShadow: '0px 4px 8px rgba(0,0,0,0.06)' }}>
-            <span className="text-[11px] font-bold uppercase tracking-wider"
-                  style={{ color: C.orDark, letterSpacing: '0.5px' }}>
+            <span className="text-[10px] font-bold whitespace-nowrap shrink-0"
+                  style={{ color: C.orDark }}>
               보상 미리보기
             </span>
-            <div className="flex items-center gap-2">
-              <span className="num font-extrabold text-[14px] flex items-center gap-1"
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span className="num font-extrabold text-[12px] whitespace-nowrap"
                     style={{ color: C.mid }}>
-                + {earn} 🌱 새싹
+                +{earn} 🌱 새싹
               </span>
-              <span className="text-[12px] font-bold" style={{ color: C.primary }}>
+              <span className="text-[11px] font-bold whitespace-nowrap" style={{ color: C.primary }}>
                 · {formatBiumCo2(co2g)}
               </span>
             </div>
