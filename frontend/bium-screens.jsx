@@ -946,39 +946,54 @@ function CleanCompleteScreen({ earnedSeed, earnedCO2g, onMarket, onHome }) {
 
 
 // ═══════════════════════════════════════════════════════════════════════
-// 6. REWARDS MARKET — based on 08_RewardsMarket
+// 6. REWARDS MARKET — 경기지역화폐 금액권 단일 라인업
+// 디자인 참조: docs PDF, reference/src/variation-c.jsx
 // ═══════════════════════════════════════════════════════════════════════
 
-const REWARD_CATS = ['전체', '식음료', '뷰티', '쇼핑', '교통', '기부'];
+// 경기 블루 톤 (지폐 그라데이션용)
+const GG_PAY = {
+  light: '#1F6FBF',
+  base:  '#084796',
+  deep:  '#053467',
+  ink:   '#042450',
+  badgeBg: 'rgba(127,177,240,0.28)',
+  badgeFg: '#BFD7F5',
+  blue50:  '#F1F6FD',
+  blue100: '#E4EFFB',
+  blueText:'#003C7E',
+};
 
-const REWARDS = [
-  { id: 'c1', name: 'Americano Tall', sub: '모닝커피 디지털 쿠폰',
-    brand: 'MORNING COFFEE', cost: 1500, tag: '⚡ 인기 #1',
-    palette: ['#D8EEDF', '#74C69D'], cup: true },
-  { id: 'c2', name: '환경단체 기부', sub: '환경 보호 단체에 기부',
-    brand: 'DONATION', cost: 1500,
-    palette: ['#D6D8E8', '#FFF284'], emoji: '🌍' },
-  { id: 'c3', name: '올리브영 2만 원권', sub: '뷰티 쇼핑 쿠폰',
-    brand: 'OLIVE YOUNG', cost: 1500,
-    palette: ['#E3E8CB', '#74C69D'], emoji: '💄' },
-  { id: 'c4', name: '카페 톨 사이즈 음료', sub: '전국 매장 사용 가능',
-    brand: 'COFFEE', cost: 1200,
-    palette: ['#D8EEDF', '#1B4332'], emoji: '☕' },
-  { id: 'c5', name: '지하철 1회 이용권', sub: '수도권 전 노선',
-    brand: 'METRO', cost: 1450,
-    palette: ['#E5EAFF', '#5B7DD6'], emoji: '🚇' },
-  { id: 'c6', name: '학식 1식 교환권', sub: '학생식당 / 멋사대 본관',
-    brand: 'CAMPUS', cost: 500,
-    palette: ['#FFE4D6', '#F4A261'], emoji: '🍱' },
+// 1새싹 = 1원. cost(새싹) = won(원).
+const VOUCHERS = [
+  { id: 'gp1k',  won: 1000,  accent: GG_PAY.light, tag: null },
+  { id: 'gp3k',  won: 3000,  accent: GG_PAY.base,  tag: '인기' },
+  { id: 'gp5k',  won: 5000,  accent: GG_PAY.base,  tag: null },
+  { id: 'gp10k', won: 10000, accent: GG_PAY.deep,  tag: null },
 ];
 
+// reward 객체 정규화 — RewardsDetailScreen 등 외부 호출 호환 유지.
+function toRewardLike(v) {
+  return {
+    id: v.id,
+    won: v.won,
+    cost: v.won,        // 1새싹 = 1원
+    name: `경기지역화폐 ${v.won.toLocaleString()}원권`,
+    brand: 'GYEONGGI PAY',
+    sub: `경기도 내 가맹점 약 122,000곳에서 사용 가능`,
+    tag: v.tag,
+    accent: v.accent,
+    kind: 'gyeonggi_pay',
+  };
+}
+
 function RewardsScreen({ saessak, onClaim, onDetail }) {
-  const [cat, setCat] = React.useState('전체');
   const tier = '어린잎';
-  const nextTier = '잎무성';
   const nextGoal = 3000;
   const remain = Math.max(0, nextGoal - saessak);
   const pct = Math.min(100, saessak / nextGoal * 100);
+  // 데모용 — 사용자가 이미 보유한 경기지역화폐 권수
+  const heldCount = 3;
+  const heldTotalWon = 9000;
 
   return (
     <div className="screen-in pb-8">
@@ -990,194 +1005,272 @@ function RewardsScreen({ saessak, onClaim, onDetail }) {
             리워드 마켓
           </div>
           <div className="text-[12px] mt-1 font-medium" style={{ color: C.text3 }}>
-            모은 새싹을 쿠폰으로 바꿔보세요
+            모은 새싹을 경기지역화폐로 바꿔보세요
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <button className="w-9 h-9 rounded-full bg-white grid place-items-center"
-                  style={{ boxShadow: '0px 4px 12px rgba(15,26,20,0.05)', color: C.primary }}>
-            <IconSearch size={16}/>
-          </button>
-          <button className="relative w-9 h-9 rounded-full bg-white grid place-items-center"
-                  style={{ boxShadow: '0px 4px 12px rgba(15,26,20,0.05)', color: C.primary }}>
-            <IconBell size={16}/>
-            <span className="absolute top-1 right-1 min-w-[14px] h-[14px] rounded-full grid place-items-center px-1 num"
-                  style={{ background: '#EA4335', color: '#fff', fontSize: 8, fontWeight: 700 }}>
-              3
-            </span>
-          </button>
-        </div>
+        <button className="relative w-9 h-9 rounded-full bg-white grid place-items-center"
+                style={{ boxShadow: '0px 4px 12px rgba(15,26,20,0.05)', color: C.primary }}>
+          <IconBell size={16}/>
+          <span className="absolute -top-1 -right-1 min-w-[16px] h-[16px] rounded-full grid place-items-center px-1 num"
+                style={{ background: C.orAcc, color: '#fff', fontSize: 9, fontWeight: 700 }}>
+            3
+          </span>
+        </button>
       </div>
 
-      {/* ─── hero (sprout balance) ───────────── */}
+      {/* ─── hero: 새싹 잔액 + 환전 가능 표시 + 어린잎 진척 ─── */}
       <div className="px-[26px] mt-5">
-        <div className="relative overflow-hidden rounded-[28px] p-5 text-white"
-             style={{ background: G.rewardHero,
-                      boxShadow: '0px 18px 40px rgba(46,166,71,0.30)' }}>
-          {/* decorative leaf */}
-          <svg width="180" height="180" viewBox="0 0 180 180"
-               className="absolute -right-10 -top-10 opacity-25 pointer-events-none">
-            <path d="M20 150C20 60 80 20 170 20c-4 90-50 130-120 130a40 40 0 0 1-30 0Z"
-                  fill="#fff"/>
+        <div className="relative overflow-hidden rounded-[24px] text-white"
+             style={{ background: 'linear-gradient(165deg,#2D6A4F 0%,#1B4332 55%,#143028 100%)',
+                      boxShadow: '0px 18px 40px rgba(20,48,40,0.30)',
+                      padding: '20px 22px 18px' }}>
+          {/* 잔잔한 곡선 텍스처 */}
+          <svg viewBox="0 0 360 200" className="absolute inset-0 w-full h-full pointer-events-none"
+               style={{ opacity: 0.16 }}>
+            <path d="M0 180 Q90 130 200 155 T420 125 L420 200 L0 200 Z" fill="#74C69D"/>
           </svg>
 
-          <div className="relative">
-            <div className="flex items-center justify-between">
-              <span className="text-[12px] font-medium" style={{ color: 'rgba(255,255,255,.9)' }}>
+          <div className="relative flex items-start justify-between gap-2">
+            <div className="flex-1 min-w-0">
+              <div className="text-[11.5px] font-bold"
+                   style={{ color: 'rgba(255,255,255,0.78)' }}>
                 내 새싹 잔액
-              </span>
-              <Pill tone="white">{tier}</Pill>
+              </div>
+              <div className="mt-3 flex items-baseline gap-1.5">
+                <span className="num font-extrabold leading-none"
+                      style={{ fontSize: 42, letterSpacing: '-1.3px' }}>
+                  {fmtNum(saessak)}
+                </span>
+                <span className="text-[15px] font-bold">새싹</span>
+              </div>
+              {/* 경기지역화폐 환전 가능 — 한 줄에 들어가도록 폰트/뱃지 조정 */}
+              <div className="mt-3 flex items-center gap-1.5 whitespace-nowrap">
+                <span className="inline-flex items-center gap-1 rounded-full font-extrabold shrink-0"
+                      style={{ background: GG_PAY.badgeBg, color: GG_PAY.badgeFg,
+                               fontSize: 9, letterSpacing: '0.02em',
+                               padding: '2px 7px 2px 3px', lineHeight: 1 }}>
+                  <GyeonggiMark size={12}/>
+                  경기지역화폐
+                </span>
+                <span className="font-semibold shrink-0"
+                      style={{ color: 'rgba(255,255,255,0.82)', fontSize: 10.5 }}>
+                  최대 <b style={{ fontWeight: 800, color: '#fff' }}>{fmtNum(saessak)}원</b> 환전 가능
+                </span>
+              </div>
             </div>
 
-            <div className="mt-3 flex items-baseline gap-2">
-              <span className="num font-extrabold leading-none"
-                    style={{ fontSize: 56, letterSpacing: '-2px' }}>
-                {fmtNum(saessak)}
+            {/* 어린잎(새싹 화분) 일러스트 — 한 줄 공간 확보 위해 살짝 축소 */}
+            <SproutPotMark size={64}/>
+          </div>
+
+          {/* 등급 진척률 */}
+          <div className="relative mt-3.5 pt-3"
+               style={{ borderTop: '1px solid rgba(255,255,255,0.16)' }}>
+            <div className="flex items-center justify-between">
+              <span className="text-[11.5px] font-semibold"
+                    style={{ color: 'rgba(255,255,255,0.78)' }}>
+                🌱 {tier} · 다음 등급까지
               </span>
-              <span className="text-[20px] font-bold" style={{ color: 'rgba(255,255,255,.95)' }}>
-                새싹
+              <span className="text-[12px] font-extrabold num text-white">
+                {fmtNum(remain)} 새싹
               </span>
             </div>
-
-            <div className="mt-5">
-              <div className="flex justify-between text-[11px] font-medium mb-1.5"
-                   style={{ color: 'rgba(255,255,255,.9)' }}>
-                <span>다음 단계 · {nextTier}</span>
-                <span className="num font-bold">{fmtNum(remain)} 새싹 남음</span>
-              </div>
-              <div className="h-2 rounded-full overflow-hidden"
-                   style={{ background: 'rgba(255,255,255,.2)' }}>
-                <div className="h-full rounded-full relative"
-                     style={{ width: `${pct}%`,
-                              background: 'linear-gradient(90deg, #B8E6C5, #ffffff)' }}>
-                  <div className="absolute inset-0 shimmer-line"/>
-                </div>
-              </div>
+            <div className="relative mt-2 h-[5px] rounded-full overflow-hidden"
+                 style={{ background: 'rgba(255,255,255,0.18)' }}>
+              <div className="absolute inset-y-0 left-0 rounded-full"
+                   style={{ width: `${pct}%`,
+                            background: 'linear-gradient(90deg,#B7E4C7,#74C69D)' }}/>
             </div>
           </div>
         </div>
       </div>
 
-      {/* ─── 내 쿠폰함 quick access ──────────── */}
+      {/* ─── 내 경기지역화폐 (보유 현황) ─── */}
       <div className="px-[26px] mt-3">
-        <button className="w-full bg-white rounded-[20px] px-4 py-3.5 flex items-center gap-3"
-                style={{ boxShadow: '0px 8px 24px rgba(15,26,20,0.06)' }}>
-          <div className="w-10 h-10 rounded-xl grid place-items-center"
-               style={{ background: C.bg3, color: C.primary }}>
-            <IconGift size={20}/>
-          </div>
-          <div className="flex-1 text-left">
-            <div className="text-[13px] font-bold" style={{ color: C.primary }}>
-              내 쿠폰함
+        <button className="w-full bg-white rounded-[18px] flex items-center gap-3 text-left active:scale-[0.99] transition-transform"
+                style={{ boxShadow: '0px 6px 18px rgba(15,26,20,0.05)', padding: '14px 16px' }}>
+          <TicketMark size={36}/>
+          <div className="flex-1 min-w-0">
+            <div className="text-[13.5px] font-extrabold tracking-tight"
+                 style={{ color: C.primary }}>
+              내 경기지역화폐
             </div>
-            <div className="text-[11px] font-medium mt-0.5" style={{ color: C.text3 }}>
-              받은 쿠폰 3장 · 지금 확인하기
+            <div className="text-[11px] font-semibold mt-0.5" style={{ color: C.text3 }}>
+              보유 {heldCount}장 · 총 <b style={{ color: GG_PAY.blueText, fontWeight: 800 }}>{fmtNum(heldTotalWon)}원</b>
             </div>
           </div>
-          <IconChevR size={18} style={{ color: C.text4 }}/>
+          <IconChevR size={16} style={{ color: C.text3 }}/>
         </button>
       </div>
 
-      {/* ─── section header ────────────────── */}
-      <div className="px-[26px] mt-6 flex items-end justify-between">
-        <div>
-          <div className="text-[17px] font-extrabold tracking-tight" style={{ color: C.primary }}>
-            교환 가능 리워드
-          </div>
-          <div className="text-[11px] font-medium mt-0.5" style={{ color: C.text4 }}>
-            {REWARDS.length}개
+      {/* ─── 섹션 헤더 ─── */}
+      <div className="px-[26px] mt-6 flex items-baseline justify-between">
+        <div className="flex items-center gap-2">
+          <span className="text-[16px] font-extrabold tracking-tight"
+                style={{ color: C.primary, letterSpacing: '-0.16px' }}>
+            경기지역화폐 금액권
+          </span>
+          <span className="inline-flex items-center justify-center rounded-full"
+                style={{ background: GG_PAY.blue100, color: GG_PAY.blueText,
+                         fontSize: 11, fontWeight: 800, padding: '3px 8px' }}>
+            {VOUCHERS.length}종
+          </span>
+        </div>
+        <span className="text-[11px] font-bold" style={{ color: C.text3 }}>1새싹 = 1원</span>
+      </div>
+
+      {/* ─── 금액권 그리드 (2-col) ─── */}
+      <div className="px-[26px] mt-3 grid grid-cols-2 gap-2.5">
+        {VOUCHERS.map(v => (
+          <VoucherCard key={v.id} voucher={v} saessak={saessak}
+                       onClaim={onClaim} onDetail={onDetail}/>
+        ))}
+      </div>
+
+      {/* ─── 사용 안내 ─── */}
+      <div className="px-[26px] mt-5">
+        <div className="rounded-[14px] flex gap-2.5 items-start"
+             style={{ background: C.bg3, border: `1px solid ${C.pale}`,
+                      padding: '14px 16px' }}>
+          <IconInfo size={16} style={{ color: C.mid, flex: 'none', marginTop: 1 }}/>
+          <div className="text-[11.5px] font-semibold leading-relaxed"
+               style={{ color: C.mid }}>
+            구매한 금액권은 <b style={{ fontWeight: 800, color: C.primary }}>경기지역화폐 앱으로 자동 충전</b>되고,
+            도내 약 122,000개 가맹점에서 사용 가능해요.
           </div>
         </div>
-        <Pill tone="paper">전체</Pill>
-      </div>
-
-      {/* ─── category tabs ────────────────── */}
-      <div className="px-[26px] mt-3 flex gap-2 overflow-x-auto noscroll">
-        {REWARD_CATS.map(t => (
-          <button key={t} onClick={() => setCat(t)}
-            className={`px-3.5 py-1.5 rounded-full text-[12px] font-bold whitespace-nowrap transition-colors`}
-            style={{
-              background: cat === t ? C.primary : '#fff',
-              color: cat === t ? '#fff' : C.text2,
-              boxShadow: cat === t ? 'none' : '0px 4px 12px rgba(15,26,20,0.05)',
-            }}>
-            {t}
-          </button>
-        ))}
-      </div>
-
-      {/* ─── featured card (1st item, full width) ─── */}
-      <div className="px-[26px] mt-4">
-        <button onClick={() => onDetail && onDetail(REWARDS[0])}
-          className="w-full bg-white rounded-[22px] overflow-hidden text-left active:scale-[0.99] transition-transform relative"
-          style={{ boxShadow: '0px 12px 28px rgba(15,26,20,0.08)' }}>
-          {/* orange ribbon */}
-          <div className="absolute top-3 left-3 z-10 px-2.5 py-1 rounded-full text-[10px] font-bold text-white"
-               style={{ background: 'linear-gradient(90deg,#FF6B3D,#FF8F5A)' }}>
-            {REWARDS[0].tag}
-          </div>
-          <div className="relative h-[140px] grid place-items-center"
-               style={{ background: `linear-gradient(135deg, ${REWARDS[0].palette[0]}, ${REWARDS[0].palette[1]})` }}>
-            <CoffeeCupIllustration size={108}/>
-          </div>
-          <div className="p-4">
-            <div className="text-[10px] font-bold uppercase tracking-wider"
-                 style={{ color: '#808C94', letterSpacing: '1px' }}>
-              {REWARDS[0].brand}
-            </div>
-            <div className="mt-1 text-[18px] font-extrabold" style={{ color: '#1B3A25' }}>
-              {REWARDS[0].name}
-            </div>
-            <div className="mt-3 flex items-center justify-between">
-              <span className="num font-extrabold text-[18px] flex items-center gap-1"
-                    style={{ color: C.success }}>
-                🌱 {fmtNum(REWARDS[0].cost)}
-              </span>
-              <button onClick={(e) => { e.stopPropagation(); onClaim && onClaim(REWARDS[0]); }}
-                className="px-4 py-2 rounded-full text-[12px] font-bold text-white"
-                style={{ background: C.success,
-                         boxShadow: '0px 6px 16px rgba(46,166,71,0.35)' }}>
-                교환하기
-              </button>
-            </div>
-          </div>
-        </button>
-      </div>
-
-      {/* ─── grid of remaining rewards ───────── */}
-      <div className="px-[26px] mt-3 grid grid-cols-2 gap-3">
-        {REWARDS.slice(1).map(r => (
-          <button key={r.id} onClick={() => onDetail && onDetail(r)}
-            className="text-left bg-white rounded-[20px] overflow-hidden active:scale-[0.98] transition-transform"
-            style={{ boxShadow: '0px 8px 24px rgba(15,26,20,0.06)' }}>
-            <div className="h-[88px] grid place-items-center text-[36px]"
-                 style={{ background: `linear-gradient(135deg, ${r.palette[0]}, ${r.palette[1]})` }}>
-              <span style={{ textShadow: '0 2px 8px rgba(0,0,0,.18)' }}>{r.emoji}</span>
-            </div>
-            <div className="p-3">
-              <div className="text-[10px] font-bold uppercase" style={{ color: C.text4 }}>
-                {r.brand}
-              </div>
-              <div className="mt-0.5 text-[12.5px] font-bold leading-tight"
-                   style={{ color: '#1B3A25' }}>
-                {r.name}
-              </div>
-              <div className="mt-2 flex items-center justify-between">
-                <span className="num font-extrabold text-[14px] flex items-center gap-0.5"
-                      style={{ color: saessak >= r.cost ? C.success : C.text4 }}>
-                  🌱 {fmtNum(r.cost)}
-                </span>
-                <span className="text-[10px] font-bold rounded-full px-2 py-0.5"
-                      style={{ background: saessak >= r.cost ? C.primary : C.bg2,
-                               color: saessak >= r.cost ? '#fff' : C.text4 }}>
-                  {saessak >= r.cost ? '교환' : `${fmtNum(r.cost - saessak)}↑`}
-                </span>
-              </div>
-            </div>
-          </button>
-        ))}
       </div>
     </div>
+  );
+}
+
+// ── Voucher Card (그리드 한 칸) ─────────────────────────────────────────────
+function VoucherCard({ voucher, saessak, onClaim, onDetail }) {
+  const cost = voucher.won; // 1새싹 = 1원
+  const affordable = saessak >= cost;
+  const reward = toRewardLike(voucher);
+
+  return (
+    <button onClick={() => onDetail && onDetail(reward)}
+      className="relative text-left bg-white rounded-[18px] overflow-hidden active:scale-[0.99] transition-transform"
+      style={{ boxShadow: '0px 6px 16px rgba(15,26,20,0.06)',
+               opacity: affordable ? 1 : 0.62,
+               padding: '14px 14px' }}>
+      {/* 코너 뱃지 */}
+      {voucher.tag && (
+        <span className="absolute z-10"
+              style={{ top: 10, right: 10, background: C.orAcc, color: '#fff',
+                       fontSize: 9, fontWeight: 800, padding: '3px 7px',
+                       borderRadius: 6, letterSpacing: '0.04em' }}>
+          {voucher.tag}
+        </span>
+      )}
+
+      {/* 지폐 일러스트 */}
+      <div className="relative overflow-hidden rounded-[12px]"
+           style={{ background: `linear-gradient(135deg, ${voucher.accent} 0%, ${GG_PAY.ink} 100%)`,
+                    height: 92, color: '#fff' }}>
+        <img src="public/gyeonggi-mark.png" alt=""
+             style={{ position: 'absolute', left: -16, top: -14,
+                      width: 130, height: 130, opacity: 0.42, pointerEvents: 'none' }}/>
+        <div style={{ position: 'absolute', top: 8, right: 10,
+                      fontSize: 8, fontWeight: 800, letterSpacing: '0.06em', opacity: 0.82 }}>
+          경기지역화폐
+        </div>
+        <div style={{ position: 'absolute', right: 12, bottom: 10,
+                      fontSize: 22, fontWeight: 800, letterSpacing: '-0.03em',
+                      fontFamily: 'Inter' }}>
+          ₩{voucher.won.toLocaleString()}
+        </div>
+      </div>
+
+      {/* 텍스트 + 가격 + CTA */}
+      <div className="mt-3">
+        <div className="text-[10px] font-extrabold tracking-wider"
+             style={{ color: GG_PAY.base, letterSpacing: '0.06em' }}>
+          GYEONGGI PAY
+        </div>
+        <div className="mt-0.5 text-[14px] font-extrabold leading-tight tracking-tight"
+             style={{ color: C.primary }}>
+          ₩{voucher.won.toLocaleString()}권
+        </div>
+        <div className="mt-1.5 flex items-baseline gap-1">
+          <span className="text-[12px]" style={{ color: C.success }}>🌱</span>
+          <span className="text-[14px] font-extrabold num"
+                style={{ color: C.mid, letterSpacing: '-0.01em' }}>
+            {fmtNum(cost)}
+          </span>
+          <span className="text-[11px] font-bold" style={{ color: C.text3 }}>새싹</span>
+        </div>
+        <button onClick={(e) => {
+                  e.stopPropagation();
+                  if (affordable) {
+                    onClaim && onClaim(reward);
+                  } else {
+                    onDetail && onDetail(reward);
+                  }
+                }}
+          disabled={false}
+          className="mt-2 w-full rounded-[10px] text-[12px] font-extrabold text-white"
+          style={{ background: affordable ? C.primary : C.bg2,
+                   color: affordable ? '#fff' : C.text4,
+                   padding: '9px',
+                   boxShadow: affordable ? '0px 6px 14px rgba(27,67,50,0.20)' : 'none' }}>
+          {affordable ? '교환하기' : `${fmtNum(cost - saessak)} 새싹 더 필요`}
+        </button>
+      </div>
+    </button>
+  );
+}
+
+// ── Gyeonggi mark (real PNG, used in pills + bill backgrounds) ────────────
+function GyeonggiMark({ size = 16 }) {
+  return (
+    <img src="public/gyeonggi-mark.png" alt="경기지역화폐"
+         width={size} height={size}
+         style={{ display: 'block', flex: 'none' }}/>
+  );
+}
+
+// ── Sprout pot illustration (어린잎) ───────────────────────────────────────
+function SproutPotMark({ size = 78 }) {
+  return (
+    <svg viewBox="0 0 110 110" width={size} height={size}
+         style={{ flex: 'none' }} aria-hidden="true">
+      <defs>
+        <radialGradient id="sproutPotBg" cx="50%" cy="60%" r="60%">
+          <stop offset="0%" stopColor="rgba(183,228,199,0.35)"/>
+          <stop offset="100%" stopColor="rgba(183,228,199,0)"/>
+        </radialGradient>
+      </defs>
+      <ellipse cx="55" cy="62" rx="44" ry="42" fill="url(#sproutPotBg)"/>
+      <path d="M30 70 L80 70 L74 95 Q74 99 70 99 L40 99 Q36 99 36 95 Z" fill="#A85A1F"/>
+      <path d="M28 65 L82 65 L80 73 L30 73 Z" fill="#C97343"/>
+      <ellipse cx="55" cy="65" rx="27" ry="3" fill="rgba(0,0,0,0.18)"/>
+      <ellipse cx="55" cy="65" rx="24" ry="2.5" fill="#3C2A1F"/>
+      <path d="M55 65 L55 38" stroke="#2D6A4F" strokeWidth="3" strokeLinecap="round"/>
+      <path d="M55 50 C40 50 32 42 32 30 C46 30 55 38 55 50 Z" fill="#52B788"/>
+      <path d="M55 50 C70 50 78 42 78 30 C64 30 55 38 55 50 Z" fill="#74C69D"/>
+      <path d="M50 38 C46 36 42 34 38 32" stroke="#B7E4C7" strokeWidth="1.2"
+            strokeLinecap="round" fill="none"/>
+      <circle cx="85" cy="32" r="2" fill="#FFE9A8"/>
+      <circle cx="22" cy="40" r="1.5" fill="#FFE9A8"/>
+    </svg>
+  );
+}
+
+// ── Ticket / coupon icon (보유 카드 좌측) ──────────────────────────────────
+function TicketMark({ size = 36 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 36 36" fill="none"
+         style={{ flex: 'none' }} aria-hidden="true">
+      <rect x="4" y="10" width="28" height="16" rx="3" fill="#E4E7DD"/>
+      <rect x="4" y="10" width="28" height="16" rx="3" fill="none"
+            stroke="#9AA89F" strokeWidth="1.4"/>
+      <circle cx="18" cy="10" r="2" fill="#F8F9F4"/>
+      <circle cx="18" cy="26" r="2" fill="#F8F9F4"/>
+      <path d="M11 18 L25 18" stroke="#9AA89F" strokeWidth="1.4" strokeDasharray="2 2"/>
+    </svg>
   );
 }
 
@@ -1188,143 +1281,218 @@ function RewardsScreen({ saessak, onClaim, onDetail }) {
 
 function RewardsDetailScreen({ reward, saessak, onBack, onExchange }) {
   if (!reward) return null;
-  const after = Math.max(0, saessak - reward.cost);
-  const canBuy = saessak >= reward.cost;
+  const won = reward.won || reward.cost;          // 새 voucher / 구 reward 호환
+  const cost = reward.cost || reward.won;
+  const canBuy = saessak >= cost;
+  const accent = reward.accent || GG_PAY.base;
+
   return (
-    <div className="screen-in pb-32">
-      {/* ─── header ─────────────────────── */}
-      <div className="px-[26px] pt-3 relative h-12 flex items-center">
+    <div className="screen-in pb-32 relative">
+      {/* ─── header ─── */}
+      <div className="px-[18px] pt-3 relative h-12 flex items-center justify-between">
         <button onClick={onBack}
-          className="absolute left-[26px] text-[24px] font-bold leading-none"
-          style={{ color: C.primary }}>←</button>
-        <div className="w-full text-center text-[17px] font-bold"
-             style={{ color: C.primary }}>
-          새싹으로 교환하기
+          className="w-9 h-9 rounded-full bg-white grid place-items-center"
+          style={{ boxShadow: '0px 4px 10px rgba(15,26,20,0.06)' }}>
+          <span style={{ color: C.primary, fontSize: 18, fontWeight: 800, lineHeight: 1 }}>←</span>
+        </button>
+        <div className="text-[13px] font-extrabold tracking-tight"
+             style={{ color: C.primary, letterSpacing: '-0.01em' }}>
+          금액권 상세
         </div>
+        <button className="w-9 h-9 rounded-full bg-white grid place-items-center"
+                style={{ boxShadow: '0px 4px 10px rgba(15,26,20,0.06)' }}>
+          <ShareIcon size={15} color={C.primary}/>
+        </button>
       </div>
 
-      {/* ─── hero product card ─────────── */}
+      {/* ─── hero (blue gradient + large bill) ─── */}
       <div className="px-[26px] mt-3">
-        <div className="relative overflow-hidden rounded-[28px] p-5 text-white h-[210px]"
-             style={{ background: G.rewardHero,
-                      boxShadow: '0px 18px 40px rgba(46,166,71,0.3)' }}>
-          {/* decorative circles */}
-          <div className="absolute -right-8 -top-12 w-44 h-44 rounded-full"
-               style={{ background: 'rgba(255,255,255,.12)' }}/>
-          <div className="absolute right-6 -bottom-8 w-24 h-24 rounded-full"
-               style={{ background: 'rgba(255,255,255,.10)' }}/>
+        <div className="relative overflow-hidden rounded-[24px] text-white"
+             style={{ background: `linear-gradient(165deg, ${GG_PAY.light} 0%, ${GG_PAY.base} 55%, ${GG_PAY.deep} 100%)`,
+                      boxShadow: '0px 18px 40px rgba(8,71,150,0.32)',
+                      padding: '24px 22px 22px' }}>
+          {/* 잔잔한 곡선 텍스처 */}
+          <svg viewBox="0 0 360 220" className="absolute inset-0 w-full h-full pointer-events-none"
+               style={{ opacity: 0.16 }}>
+            <path d="M0 200 Q90 150 200 175 T420 145 L420 220 L0 220 Z" fill="#BFD7F5"/>
+          </svg>
 
-          {/* product illustration */}
-          <div className="absolute right-4 top-7">
-            {reward.cup
-              ? <CoffeeCupIllustration size={120}/>
-              : <div className="text-[100px] leading-none">{reward.emoji}</div>}
+          {/* 경기지역화폐 뱃지 */}
+          <div className="relative inline-flex items-center gap-1.5 rounded-full"
+               style={{ background: 'rgba(255,255,255,0.20)', color: '#fff',
+                        fontSize: 11, fontWeight: 800, letterSpacing: '0.02em',
+                        padding: '4px 12px 4px 4px' }}>
+            <GyeonggiMark size={20}/>
+            경기지역화폐
           </div>
 
-          <div className="relative max-w-[200px]">
+          {/* 큰 지폐 */}
+          <div className="relative mt-4 flex justify-center">
+            <BillLarge won={won}/>
+          </div>
+
+          {/* 제목 */}
+          <div className="relative mt-4 text-center">
+            <div className="text-[10.5px] font-extrabold tracking-wider"
+                 style={{ color: 'rgba(255,255,255,0.75)', letterSpacing: '0.08em' }}>
+              GYEONGGI PAY
+            </div>
+            <div className="mt-1.5 text-[22px] font-extrabold tracking-tight leading-tight">
+              경기지역화폐 {won.toLocaleString()}원권
+            </div>
+            <div className="mt-1.5 text-[12.5px] font-medium"
+                 style={{ color: 'rgba(255,255,255,0.78)' }}>
+              경기도 내 가맹점 약 122,000곳에서 사용 가능
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ─── 교환 가격 / 내 잔액 ─── */}
+      <div className="px-[26px] mt-3.5">
+        <div className="bg-white rounded-[18px] flex items-center justify-between"
+             style={{ boxShadow: '0px 6px 18px rgba(15,26,20,0.05)',
+                      padding: '16px 18px' }}>
+          <div>
+            <div className="text-[10.5px] font-extrabold tracking-wider"
+                 style={{ color: C.text3, letterSpacing: '0.04em' }}>
+              교환 가격
+            </div>
+            <div className="mt-1 flex items-baseline gap-1.5">
+              <span className="text-[15px]" style={{ color: C.success }}>🌱</span>
+              <span className="num font-extrabold"
+                    style={{ fontSize: 26, letterSpacing: '-0.5px', color: C.primary }}>
+                {fmtNum(cost)}
+              </span>
+              <span className="text-[13px] font-extrabold" style={{ color: C.primary }}>새싹</span>
+            </div>
+          </div>
+          <div className="rounded-[12px] text-right"
+               style={{ background: C.bg3, padding: '10px 14px' }}>
+            <div className="text-[10px] font-extrabold tracking-wider"
+                 style={{ color: C.mid, letterSpacing: '0.02em' }}>
+              내 잔액
+            </div>
+            <div className="mt-0.5 text-[15px] font-extrabold tracking-tight"
+                 style={{ color: C.primary }}>
+              {fmtNum(saessak)} <span style={{ fontSize: 11 }}>새싹</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ─── 가맹점 위치 ─── */}
+      <div className="px-[26px] mt-3.5">
+        <div className="bg-white rounded-[18px] overflow-hidden"
+             style={{ boxShadow: '0px 6px 16px rgba(15,26,20,0.05)' }}>
+          <div className="flex items-center justify-between"
+               style={{ padding: '14px 16px 10px' }}>
             <div className="flex items-center gap-2">
-              <Pill tone="white">{reward.brand}</Pill>
-              <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5"
-                    style={{ background: 'rgba(255,255,255,.2)' }}>
-                <span className="w-1.5 h-1.5 rounded-full bg-white"/>
-                <span className="text-[10px] font-bold">재고 충분</span>
-              </span>
+              <LocationIcon size={16} color={GG_PAY.blueText} stroke={1.9}/>
+              <span className="text-[14px] font-extrabold tracking-tight"
+                    style={{ color: C.primary }}>가맹점 위치</span>
             </div>
-            <div className="mt-3 text-[22px] font-extrabold leading-tight"
-                 style={{ letterSpacing: '-0.4px' }}>
-              {reward.name}
+            <span className="text-[11px] font-bold" style={{ color: GG_PAY.blueText }}>
+              전체 지도 ›
+            </span>
+          </div>
+
+          {/* mini map */}
+          <div className="relative" style={{ margin: '0 12px' }}>
+            <MerchantMap height={170}/>
+            <div className="absolute"
+                 style={{ left: '60%', top: '64%', transform: 'translate(-50%, -100%)',
+                          background: '#fff', borderRadius: 10,
+                          padding: '7px 10px', minWidth: 110,
+                          boxShadow: '0 6px 14px rgba(0,0,0,0.18)' }}>
+              <div className="text-[9px] font-extrabold tracking-wider"
+                   style={{ color: C.orDark, letterSpacing: '0.04em' }}>
+                가장 가까움 · 220m
+              </div>
+              <div className="mt-0.5 text-[11px] font-bold" style={{ color: C.primary }}>
+                참새방앗간
+              </div>
+              <div className="absolute"
+                   style={{ left: '50%', bottom: -5, transform: 'translateX(-50%)',
+                            width: 0, height: 0,
+                            borderLeft: '5px solid transparent',
+                            borderRight: '5px solid transparent',
+                            borderTop: '5px solid #fff' }}/>
             </div>
-            <div className="mt-1 text-[12px]" style={{ color: 'rgba(255,255,255,.9)' }}>
-              {reward.sub}
-            </div>
+          </div>
+
+          {/* merchant list */}
+          <div style={{ padding: '6px 16px 14px' }}>
+            {[
+              { name: '참새방앗간 카페',   tag: '수원시 영통구', dist: '220m', icon: 'cafe'  },
+              { name: '동네책방 토끼와거북', tag: '수원시 권선구', dist: '480m', icon: 'book'  },
+              { name: '소담 분식',          tag: '수원시 팔달구', dist: '1.1km', icon: 'store' },
+            ].map((m, i, arr) => (
+              <div key={m.name}
+                   className="flex items-center gap-3"
+                   style={{ padding: '10px 0',
+                            borderBottom: i < arr.length - 1 ? '1px solid rgba(15,26,20,0.05)' : 'none' }}>
+                <div className="w-[34px] h-[34px] rounded-[10px] grid place-items-center"
+                     style={{ background: GG_PAY.blue50, color: GG_PAY.blueText }}>
+                  <MerchantIcon kind={m.icon} size={16}/>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-[12.5px] font-bold truncate"
+                       style={{ color: C.primary }}>{m.name}</div>
+                  <div className="text-[10.5px] font-semibold mt-0.5 truncate"
+                       style={{ color: C.text3 }}>{m.tag}</div>
+                </div>
+                <div className="flex items-center gap-1 rounded-full"
+                     style={{ background: C.bg3, padding: '4px 8px' }}>
+                  <LocationIcon size={10} color={C.mid} stroke={2}/>
+                  <span className="text-[10.5px] font-extrabold" style={{ color: C.mid }}>
+                    {m.dist}
+                  </span>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </div>
 
-      {/* ─── 교환 후 내 새싹 calculator ──── */}
-      <div className="px-[26px] mt-5">
-        <div className="bg-white rounded-[20px] p-4 relative overflow-hidden"
-             style={{ boxShadow: '0px 8px 24px rgba(15,26,20,0.06)' }}>
-          <div className="absolute left-0 top-0 bottom-0 w-1" style={{ background: C.success }}/>
-          <div className="pl-3">
-            <div className="text-[13px] font-bold" style={{ color: C.primary }}>
-              교환 후 내 새싹
+      {/* ─── 정보 ─── */}
+      <div className="px-[26px] mt-3.5">
+        <div className="bg-white rounded-[16px]"
+             style={{ boxShadow: '0px 6px 16px rgba(15,26,20,0.05)',
+                      padding: '4px 16px 8px' }}>
+          {[
+            ['유효기간', '발급 후 5년'],
+            ['사용 방식', '경기지역화폐 앱 자동 충전'],
+            ['환불·취소', '미사용 시 7일 내 가능'],
+          ].map((row, i, arr) => (
+            <div key={row[0]}
+                 className="flex items-center justify-between"
+                 style={{ padding: '12px 0',
+                          borderBottom: i < arr.length - 1 ? '1px solid rgba(15,26,20,0.05)' : 'none' }}>
+              <span className="text-[12px] font-semibold" style={{ color: C.text3 }}>{row[0]}</span>
+              <span className="text-[12.5px] font-bold" style={{ color: C.primary }}>{row[1]}</span>
             </div>
-            <div className="mt-3 flex items-center gap-3">
-              {/* current */}
-              <div className="flex-1 rounded-[14px] p-3 border"
-                   style={{ background: '#F3F9F3', borderColor: '#E0EEE3' }}>
-                <div className="flex items-center gap-1 text-[10px] font-medium"
-                     style={{ color: '#808C94' }}>
-                  현재
-                </div>
-                <div className="mt-1 flex items-center gap-1 text-[11px] font-bold"
-                     style={{ color: '#1B3A25' }}>
-                  <TierIcon size={20} tone="light"/> 어린잎
-                </div>
-                <div className="mt-1 text-[16px] num font-extrabold"
-                     style={{ color: C.success }}>
-                  🌱 {fmtNum(saessak)}
-                </div>
-              </div>
-              {/* arrow */}
-              <IconArrowR size={18} style={{ color: C.text4 }}/>
-              {/* after */}
-              <div className="flex-1 rounded-[14px] p-3 border border-dashed"
-                   style={{ background: '#FFFAF2', borderColor: '#FFB84A' }}>
-                <div className="flex items-center gap-1 text-[10px] font-medium"
-                     style={{ color: '#B8842C' }}>
-                  교환 후
-                </div>
-                <div className="mt-1 flex items-center gap-1 text-[11px] font-bold"
-                     style={{ color: '#B8842C' }}>
-                  <TierIcon size={20} tone="empty"/>
-                </div>
-                <div className="mt-1 text-[16px] num font-extrabold"
-                     style={{ color: '#B8842C' }}>
-                  🌱 {fmtNum(after)}
-                </div>
-              </div>
-            </div>
-
-            {/* deduction strip */}
-            <div className="mt-3 rounded-[12px] px-3 py-2 flex items-center justify-between"
-                 style={{ background: '#FFF5E9' }}>
-              <span className="text-[11px] font-bold" style={{ color: '#D97706' }}>
-                차감되는 새싹
-              </span>
-              <span className="text-[13px] num font-extrabold" style={{ color: '#D97706' }}>
-                - {fmtNum(reward.cost)} 새싹
-              </span>
-            </div>
-          </div>
+          ))}
         </div>
       </div>
 
-      {/* ─── info cards ───────────────── */}
-      <div className="px-[26px] mt-3 flex flex-col gap-2">
-        <RewardInfoRow icon="⚡" title="발급 즉시 사용 가능" sub={`${reward.brand} 앱에서 바로 쓸 수 있어요`}/>
-        <RewardInfoRow icon="📅" title="유효기간 60일" sub="발급일로부터 60일 이내 사용"/>
-      </div>
-
-      {/* ─── CTA button (sticky-ish) ──── */}
-      <div className="px-[26px] mt-6">
+      {/* ─── CTA ─── */}
+      <div className="absolute left-0 right-0 bottom-0"
+           style={{ padding: '14px 20px 34px',
+                    background: 'linear-gradient(rgba(248,249,244,0) 0%, #F8F9F4 30%)' }}>
         <button onClick={() => canBuy && onExchange && onExchange(reward)}
           disabled={!canBuy}
-          className="w-full rounded-[28px] h-[64px] px-5 flex items-center justify-between text-white"
-          style={{ background: canBuy ? G.greenBtn : 'rgba(15,26,20,.25)',
-                   boxShadow: canBuy ? '0px 12px 28px rgba(27,67,50,0.3)' : 'none' }}>
-          <div className="text-left leading-tight">
-            <div className="text-[10px] font-medium opacity-80">교환 비용</div>
-            <div className="text-[15px] font-bold num">🌱 {fmtNum(reward.cost)} 새싹</div>
-          </div>
-          <div className="flex items-center gap-1 text-[15px] font-bold">
-            교환하기 <IconArrowR size={16}/>
-          </div>
+          className="w-full rounded-[16px] text-white font-extrabold flex items-center justify-center gap-2 active:scale-[0.99] transition-transform"
+          style={{ background: canBuy ? C.primary : 'rgba(15,26,20,0.25)',
+                   boxShadow: canBuy ? '0 14px 30px rgba(27,67,50,0.35)' : 'none',
+                   fontSize: 15, letterSpacing: '-0.01em',
+                   padding: '16px' }}>
+          <span style={{ fontSize: 15 }}>🌱</span>
+          {fmtNum(cost)} 새싹으로 교환하기
         </button>
         {!canBuy && (
-          <div className="text-center text-[11px] mt-2 font-medium" style={{ color: C.text4 }}>
-            {fmtNum(reward.cost - saessak)} 새싹만 더 모으면 가능해요
+          <div className="text-center text-[11px] mt-2 font-semibold" style={{ color: C.text3 }}>
+            {fmtNum(cost - saessak)} 새싹만 더 모으면 가능해요
           </div>
         )}
       </div>
@@ -1332,18 +1500,157 @@ function RewardsDetailScreen({ reward, saessak, onBack, onExchange }) {
   );
 }
 
-function RewardInfoRow({ icon, title, sub }) {
+// ── Large bill (detail hero) ─────────────────────────────────────────────
+function BillLarge({ won = 1000 }) {
   return (
-    <div className="bg-white rounded-[16px] px-3.5 py-3 flex items-center gap-3"
-         style={{ border: '1px solid rgba(15,26,20,0.04)' }}>
-      <div className="w-9 h-9 rounded-full grid place-items-center text-[16px]"
-           style={{ background: C.bg3 }}>
-        {icon}
+    <div className="relative overflow-hidden"
+         style={{ width: 240, height: 140, borderRadius: 14,
+                  background: 'linear-gradient(135deg, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0.06) 100%)',
+                  border: '1.5px solid rgba(255,255,255,0.40)',
+                  boxShadow: '0 14px 30px rgba(0,0,0,0.28)' }}>
+      <img src="public/gyeonggi-mark.png" alt=""
+           style={{ position: 'absolute', left: -28, top: -22,
+                    width: 180, height: 180, opacity: 0.38, pointerEvents: 'none' }}/>
+      <div style={{ position: 'absolute', top: 14, left: 18,
+                    fontSize: 11, fontWeight: 800, letterSpacing: '0.04em', color: '#fff' }}>
+        경기지역화폐
       </div>
-      <div className="flex-1 leading-tight">
-        <div className="text-[13px] font-bold" style={{ color: '#1B3A25' }}>{title}</div>
-        <div className="text-[11px] font-medium mt-0.5" style={{ color: C.text3 }}>{sub}</div>
+      <div style={{ position: 'absolute', top: 14, right: 18,
+                    fontSize: 9.5, fontWeight: 700, letterSpacing: '0.1em',
+                    color: 'rgba(255,255,255,0.72)' }}>
+        GYEONGGI PAY
       </div>
+      <div style={{ position: 'absolute', right: 18, bottom: 12,
+                    fontSize: 34, fontWeight: 800, letterSpacing: '-0.03em',
+                    color: '#fff', fontFamily: 'Inter' }}>
+        ₩{won.toLocaleString()}
+      </div>
+      <div style={{ position: 'absolute', left: 18, bottom: 14,
+                    fontSize: 9, fontWeight: 700, letterSpacing: '0.12em',
+                    color: 'rgba(255,255,255,0.55)', fontFamily: 'Inter' }}>
+        GG 0123 4567 8901
+      </div>
+    </div>
+  );
+}
+
+// ── Inline icons (share / location / merchant) ───────────────────────────
+function ShareIcon({ size = 16, color = '#1B4332' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <circle cx="18" cy="5"  r="2.5" stroke={color} strokeWidth="1.7" fill="none"/>
+      <circle cx="6"  cy="12" r="2.5" stroke={color} strokeWidth="1.7" fill="none"/>
+      <circle cx="18" cy="19" r="2.5" stroke={color} strokeWidth="1.7" fill="none"/>
+      <path d="M8.2 10.8L15.8 6.5M8.2 13.2l7.6 4.3" stroke={color} strokeWidth="1.7" strokeLinecap="round"/>
+    </svg>
+  );
+}
+
+function LocationIcon({ size = 16, color = '#003C7E', stroke = 1.8 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M12 22s7-7 7-12a7 7 0 1 0-14 0c0 5 7 12 7 12z"
+            stroke={color} strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+      <circle cx="12" cy="10" r="2.5" stroke={color} strokeWidth={stroke} fill="none"/>
+    </svg>
+  );
+}
+
+function MerchantIcon({ kind, size = 16 }) {
+  const color = GG_PAY.blueText;
+  const p = { fill: 'none', stroke: color, strokeWidth: 1.6,
+              strokeLinecap: 'round', strokeLinejoin: 'round' };
+  let body = null;
+  if (kind === 'cafe') {
+    body = (
+      <>
+        <path {...p} d="M4 7h13v6a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5V7z"/>
+        <path {...p} d="M17 9h2a2 2 0 0 1 0 4h-2"/>
+        <path {...p} d="M8 4v1M11 3v2M14 4v1"/>
+      </>
+    );
+  } else if (kind === 'book') {
+    body = (
+      <>
+        <path {...p} d="M4 5.5C4 4.7 4.7 4 5.5 4H11v15H5.5a1.5 1.5 0 0 1-1.5-1.5V5.5z"/>
+        <path {...p} d="M20 5.5C20 4.7 19.3 4 18.5 4H13v15h5.5a1.5 1.5 0 0 0 1.5-1.5V5.5z"/>
+      </>
+    );
+  } else {
+    body = (
+      <path {...p} d="M3 8l1-3.5h16L21 8M3 8h18M3 8v11h18V8M9 19v-7h6v7"/>
+    );
+  }
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      {body}
+    </svg>
+  );
+}
+
+// ── Merchant map (stylized Gyeonggi-do outline with pins) ────────────────
+function MerchantMap({ height = 170 }) {
+  const palette = {
+    sea:      '#E4EFFB',
+    land:     '#F1F6FD',
+    landDark: '#BFD7F5',
+    road:     '#fff',
+    pin:      GG_PAY.blueText,
+    pinHi:    C.orAcc,
+  };
+  const pins = [
+    { x: 205, y: 140, hi: true },
+    { x: 175, y: 152 }, { x: 240, y: 152 },
+    { x: 220, y: 130 }, { x: 195, y: 158 },
+    { x: 110, y: 140 }, { x: 250, y: 95 }, { x: 165, y: 130 },
+    { x: 230, y: 165 }, { x: 80,  y: 155 },
+  ];
+  return (
+    <div className="relative w-full overflow-hidden"
+         style={{ height, borderRadius: 16, background: palette.sea }}>
+      <svg viewBox="0 0 320 200" preserveAspectRatio="xMidYMid slice"
+           style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
+           aria-hidden="true">
+        <defs>
+          <pattern id="mapDots" x="0" y="0" width="14" height="14" patternUnits="userSpaceOnUse">
+            <circle cx="2" cy="2" r="0.7" fill="rgba(17,103,204,0.10)"/>
+          </pattern>
+        </defs>
+        <rect width="320" height="200" fill="url(#mapDots)"/>
+        {/* 경기도 outline */}
+        <path d="M30 50 Q40 30 70 32 L120 28 Q150 30 175 45 L220 50 Q260 55 280 80 L295 110 Q290 145 260 160 L210 175 Q170 185 130 175 L80 170 Q40 165 25 140 L20 100 Q22 70 30 50 Z"
+              fill={palette.land} stroke={palette.landDark} strokeWidth="1.5"/>
+        {/* 서울 enclave */}
+        <path d="M120 80 Q135 72 155 80 Q165 95 155 110 Q135 118 118 108 Q108 92 120 80 Z"
+              fill={palette.sea} stroke={palette.landDark} strokeWidth="1.2"/>
+        <text x="137" y="98" textAnchor="middle" fontSize="9" fontWeight="600"
+              fill="#94A2B8" fontFamily="Noto Sans KR, system-ui">서울</text>
+        {/* roads */}
+        <path d="M50 130 Q90 110 130 130 T230 135" stroke={palette.road} strokeWidth="2.5"
+              fill="none" strokeLinecap="round"/>
+        <path d="M180 55 Q200 90 215 140" stroke={palette.road} strokeWidth="2"
+              fill="none" strokeLinecap="round" opacity="0.7"/>
+        <path d="M70 70 Q85 100 75 145" stroke={palette.road} strokeWidth="2"
+              fill="none" strokeLinecap="round" opacity="0.7"/>
+        {/* city dots */}
+        {[[210,145,'수원'],[235,90,'의정부'],[170,150,'안양'],[250,150,'성남'],[80,150,'시흥'],[110,55,'고양'],[260,55,'동두천']].map(([x,y,n],i) => (
+          <g key={i}>
+            <circle cx={x} cy={y} r="2" fill={palette.landDark}/>
+            <text x={x+5} y={y+3} fontSize="7" fill="#94A2B8"
+                  fontFamily="Noto Sans KR, system-ui">{n}</text>
+          </g>
+        ))}
+        {/* pins */}
+        {pins.map((pin, i) => (
+          <g key={i} transform={`translate(${pin.x}, ${pin.y})`}>
+            <circle cx="0" cy="14" r="6" fill="rgba(0,0,0,0.12)"/>
+            <path d="M0 0 C-7 0 -10 6 -10 11 C-10 17 -3 25 0 28 C3 25 10 17 10 11 C10 6 7 0 0 0 Z"
+                  fill={pin.hi ? palette.pinHi : palette.pin}
+                  stroke="#fff" strokeWidth="1.5"/>
+            <circle cx="0" cy="11" r="3.5" fill="#fff"/>
+          </g>
+        ))}
+      </svg>
     </div>
   );
 }
