@@ -158,12 +158,12 @@
   }
   .confetti-anim { animation: confettiFloat 1.8s ease-in-out infinite alternate; }
 
-  /* splash loading bar — fills 0 → 100% during 2s startup */
+  /* splash loading bar — fills 0 → 100% during 1s startup */
   @keyframes splashFill {
     0%   { width: 0%; }
     100% { width: 100%; }
   }
-  .splash-fill { animation: splashFill 1.9s cubic-bezier(.22,.61,.36,1) forwards; }
+  .splash-fill { animation: splashFill 0.9s cubic-bezier(.22,.61,.36,1) forwards; }
 
   /* fade-out used to dismiss the splash before the home screen takes over */
   @keyframes splashOut {
@@ -185,7 +185,6 @@
 <script type="text/babel" src="bium-icons.jsx"></script>
 <script type="text/babel" src="bium-shared.jsx"></script>
 <script type="text/babel" src="bium-screens.jsx"></script>
-<script type="text/babel" src="bium-file-scanner.jsx"></script>
 <script type="text/babel" src="bium-app.jsx"></script>
 
 </body>
