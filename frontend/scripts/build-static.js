@@ -10,7 +10,6 @@ const staticFiles = [
   "bium-icons.jsx",
   "bium-shared.jsx",
   "bium-screens.jsx",
-  "bium-file-scanner.jsx",
   "bium-app.jsx",
 ];
 

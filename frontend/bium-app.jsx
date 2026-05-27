@@ -19,7 +19,6 @@ function tabFor(screen) {
     case 'home':           return 'home';
     case 'analyze':        return 'analyze';
     case 'clean':
-    case 'pcScanner':
     case 'trashBin':
     case 'cleanComplete':  return 'clean';
     case 'rewards':
@@ -81,7 +80,7 @@ function BottomNav({ active, onChange }) {
 }
 
 // ─── Splash / launch screen ──────────────────────────────────
-// Shown for ~2 seconds on first mount and on page refresh.
+// Shown for ~1 second on first mount and on page refresh.
 // Layout: logo PNG → tagline → progress bar → "loading ..." text.
 // Z-index sits ABOVE the bottom nav / content but BELOW the iOS
 // status bar + dynamic island so 9:41 and battery still peek through.
@@ -134,12 +133,12 @@ function Toast({ msg }) {
 // App
 // ═══════════════════════════════════════════════════════════════════
 function App() {
-  // Splash gate: shown for 2 s on first mount. `closing` runs a 0.35 s
+  // Splash gate: shown for 1 s on first mount. `closing` runs a 0.35 s
   // fade-out so the home screen doesn't pop in too abruptly.
   const [splash, setSplash]   = useState('on');     // 'on' | 'closing' | 'off'
   React.useEffect(() => {
-    const t1 = setTimeout(() => setSplash('closing'), 2000);
-    const t2 = setTimeout(() => setSplash('off'),     2350);
+    const t1 = setTimeout(() => setSplash('closing'), 1000);
+    const t2 = setTimeout(() => setSplash('off'),     1350);
     return () => { clearTimeout(t1); clearTimeout(t2); };
   }, []);
 
@@ -214,17 +213,7 @@ function App() {
         return <CleanScreen
                   onCleaned={onCleaned}
                   onTrashBin={() => setScreen('trashBin')}
-                  onPcScanner={() => setScreen('pcScanner')}
                   onComplete={onComplete}/>;
-      case 'pcScanner':
-        return <BiumFileScanner
-                  onBack={() => setScreen('clean')}
-                  onCleaned={onCleaned}
-                  onComplete={() => {
-                    setSessionEarnedSeed(seedToday);
-                    setSessionEarnedCO2g(todayCO2g);
-                    setScreen('cleanComplete');
-                  }}/>;
       case 'trashBin':
         return <TrashBinScreen onBack={() => setScreen('clean')}/>;
       case 'cleanComplete':

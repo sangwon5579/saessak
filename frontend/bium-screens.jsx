@@ -412,7 +412,7 @@ const CLEAN_TABS = [
   { key: 'photo', label: 'Cloud 사진' },
 ];
 
-function CleanScreen({ onCleaned, onTrashBin, onPcScanner, onComplete }) {
+function CleanScreen({ onCleaned, onTrashBin, onComplete }) {
   const [tab, setTab] = React.useState('all');
   const [stack, setStack] = React.useState(CLEAN_DATA.all.map((c, i) => ({ ...c, idx: i })));
   const [drag, setDrag] = React.useState({ x: 0, y: 0, on: false });
@@ -515,17 +515,6 @@ function CleanScreen({ onCleaned, onTrashBin, onPcScanner, onComplete }) {
           ))}
         </div>
       </div>
-
-      {/* PC 폴더 스캐너 진입 (전체 탭일 때만 노출) */}
-      {tab === 'all' && (
-        <div className="px-[26px] mt-3">
-          <button onClick={onPcScanner}
-            className="w-full rounded-[18px] px-4 py-3 text-[13px] font-bold text-white flex items-center justify-center gap-2 active:scale-[0.99] transition-transform"
-            style={{ background: G.greenBtn, boxShadow: '0px 10px 24px rgba(27,67,50,0.18)' }}>
-            <IconCpu size={16}/> PC 폴더 분석하기
-          </button>
-        </div>
-      )}
 
       {/* ─── card stack ────────────────────── */}
       <div className="relative mt-4 px-[26px]" style={{ height: 440 }}>
