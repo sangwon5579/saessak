@@ -986,6 +986,25 @@ function toRewardLike(v) {
   };
 }
 
+// 가로줄 한 개짜리 원화 표시(W + 단일 스트로크). 기본 ₩ 글리프는 폰트마다 가로줄이 두 줄이라 별도 컴포넌트로 처리.
+function WonSign({ style }) {
+  return (
+    <span style={{ position: 'relative', display: 'inline-block', ...style }}>
+      W
+      <span aria-hidden="true" style={{
+        position: 'absolute',
+        left: '-0.04em',
+        right: '-0.04em',
+        top: '50%',
+        height: '0.08em',
+        background: 'currentColor',
+        transform: 'translateY(-50%)',
+        pointerEvents: 'none',
+      }} />
+    </span>
+  );
+}
+
 function RewardsScreen({ saessak, onClaim, onDetail }) {
   const tier = '어린잎';
   const nextGoal = 3000;
@@ -1180,7 +1199,7 @@ function VoucherCard({ voucher, saessak, onClaim, onDetail }) {
         <div style={{ position: 'absolute', right: 12, bottom: 10,
                       fontSize: 22, fontWeight: 800, letterSpacing: '-0.03em',
                       fontFamily: 'Inter' }}>
-          ₩{voucher.won.toLocaleString()}
+          <WonSign />{voucher.won.toLocaleString()}
         </div>
       </div>
 
@@ -1192,7 +1211,7 @@ function VoucherCard({ voucher, saessak, onClaim, onDetail }) {
         </div>
         <div className="mt-0.5 text-[14px] font-extrabold leading-tight tracking-tight"
              style={{ color: C.primary }}>
-          ₩{voucher.won.toLocaleString()}권
+          <WonSign />{voucher.won.toLocaleString()}권
         </div>
         <div className="mt-1.5 flex items-baseline gap-1">
           <span className="text-[12px]" style={{ color: C.success }}>🌱</span>
@@ -1523,7 +1542,7 @@ function BillLarge({ won = 1000 }) {
       <div style={{ position: 'absolute', right: 18, bottom: 12,
                     fontSize: 34, fontWeight: 800, letterSpacing: '-0.03em',
                     color: '#fff', fontFamily: 'Inter' }}>
-        ₩{won.toLocaleString()}
+        <WonSign />{won.toLocaleString()}
       </div>
       <div style={{ position: 'absolute', left: 18, bottom: 14,
                     fontSize: 9, fontWeight: 700, letterSpacing: '0.12em',
