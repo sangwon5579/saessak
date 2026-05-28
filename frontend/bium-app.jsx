@@ -42,9 +42,9 @@ const AREAS = [
 
 // ─── Default connected accounts (Connect screen) ────────────────
 const DEFAULT_ACCOUNTS = [
-  { id: 'gmail',   kind: 'email', name: 'Gmail',       detail: 'likelion@gmail.com',
+  { id: 'gmail',   kind: 'email', name: 'Gmail',       detail: 'lovegyeonggi@gmail.com',
     letter: 'G', color: C.gmail,   bg: '#FFE2E0', connected: true,  on: true },
-  { id: 'outlook', kind: 'email', name: 'outlook',     detail: 'likelion@outlook.com',
+  { id: 'outlook', kind: 'email', name: 'outlook',     detail: 'lovegyeonggi@outlook.com',
     letter: 'O', color: C.outlook, bg: '#E0E7FF', connected: true,  on: true },
   { id: 'icloud',  kind: 'photo', name: 'iCloud 사진', detail: '4,832장 분석 중',
     letter: 'i', color: C.icloud,  bg: '#E0E7F4', connected: true,  on: true },
